@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/arabic_helpers.dart';
 import '../../models/warehouse_model.dart';
 import '../../providers/management_provider.dart';
 import '../widgets/empty_view.dart';
-import '../widgets/error_view.dart';
+
 import '../widgets/loading_widget.dart';
 
-/// شاشة إدارة المستودع، الأصناف، الفئات، وحركات الصرف والتوريد
+/// شاشة المخزن المستنسخة بدقة وعمق من Just_admin (warehouse.php, warehouse_items.php, warehouse_moves.php)
 class WarehouseScreen extends StatefulWidget {
   const WarehouseScreen({super.key});
 
@@ -18,6 +18,7 @@ class WarehouseScreen extends StatefulWidget {
 
 class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  bool _filterOnlyLowStock = false;
 
   @override
   void initState() {
@@ -36,18 +37,19 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
     super.dispose();
   }
 
-  // ==================== حوار إضافة صنف مخزني ====================
   void _showItemDialog([WarehouseItemModel? item]) {
     final formKey = GlobalKey<FormState>();
-    final nameCtrl = TextEditingController(text: item?.name);
     final codeCtrl = TextEditingController(text: item?.code);
-    final unitCtrl = TextEditingController(text: item?.unit ?? 'وحدة');
+    final nameCtrl = TextEditingController(text: item?.name);
+    final unitCtrl = TextEditingController(text: item?.unit ?? 'قطعة');
     final stockCtrl = TextEditingController(text: item?.currentStock.toString() ?? '0');
     final minStockCtrl = TextEditingController(text: item?.minStock.toString() ?? '0');
     final priceCtrl = TextEditingController(text: item?.unitPrice.toString() ?? '0');
     final locationCtrl = TextEditingController(text: item?.location);
+    final notesCtrl = TextEditingController(text: item?.notes);
     final prov = context.read<ManagementProvider>();
     int? selectedCatId = item?.categoryId ?? (prov.warehouseCategories.isNotEmpty ? prov.warehouseCategories.first.id : null);
+    final isEdit = item != null;
 
     showDialog(
       context: context,
@@ -55,113 +57,145 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
         builder: (ctx, setDialogState) => Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            title: Text(item == null ? 'إضافة صنف مخزني جديد' : 'تعديل بيانات الصنف'),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextFormField(
-                      controller: nameCtrl,
-                      decoration: const InputDecoration(labelText: 'اسم الصنف أو المادة *'),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: codeCtrl,
-                            decoration: const InputDecoration(labelText: 'كود المادة (SKU)'),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: AppTheme.cyanPale, borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.inventory_2_rounded, color: AppTheme.cyan, size: 20),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  isEdit ? 'تعديل بيانات المادة' : 'إضافة مادة جديدة',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.ink),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: TextFormField(
+                              controller: codeCtrl,
+                              decoration: const InputDecoration(labelText: 'الكود (Code) *'),
+                              validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            controller: unitCtrl,
-                            decoration: const InputDecoration(labelText: 'الوحدة (طن، كيس...)'),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 2,
+                            child: TextFormField(
+                              controller: nameCtrl,
+                              decoration: const InputDecoration(labelText: 'اسم المادة *'),
+                              validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<int>(
-                      value: selectedCatId,
-                      decoration: const InputDecoration(labelText: 'التصنيف / الفئة'),
-                      items: prov.warehouseCategories.map((c) => DropdownMenuItem(value: c.id, child: Text(c.name))).toList(),
-                      onChanged: (val) => setDialogState(() => selectedCatId = val),
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: stockCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'الرصيد الافتتاحي'),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<int>(
+                        value: selectedCatId,
+                        decoration: const InputDecoration(labelText: 'الفئة / التصنيف'),
+                        items: prov.warehouseCategories
+                            .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
+                            .toList(),
+                        onChanged: (val) => setDialogState(() => selectedCatId = val),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: unitCtrl,
+                              decoration: const InputDecoration(labelText: 'وحدة القياس'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            controller: minStockCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'الحد الأدنى للطلب'),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              controller: stockCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'الكمية المتاحة'),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: priceCtrl,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(labelText: 'سعر الوحدة التقديري'),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: minStockCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'حد إعادة الطلب'),
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            controller: locationCtrl,
-                            decoration: const InputDecoration(labelText: 'موقع التخزين / الرف'),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              controller: priceCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'سعر الوحدة'),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: locationCtrl,
+                        decoration: const InputDecoration(labelText: 'مكان التخزين (الموقع/الرف)'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextFormField(
+                        controller: notesCtrl,
+                        maxLines: 2,
+                        decoration: const InputDecoration(labelText: 'الملاحظات'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-              ElevatedButton(
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.ink),
+                icon: const Icon(Icons.check_rounded, size: 18),
+                label: Text(isEdit ? 'حفظ التعديل' : 'حفظ المادة'),
                 onPressed: () async {
                   if (!formKey.currentState!.validate()) return;
                   final payload = {
-                    if (item != null) 'id': item.id,
+                    if (isEdit) 'id': item.id,
+                    'code': codeCtrl.text.trim(),
                     'name': nameCtrl.text.trim(),
-                    if (codeCtrl.text.isNotEmpty) 'code': codeCtrl.text.trim(),
-                    'unit': unitCtrl.text.trim(),
                     'category_id': selectedCatId,
-                    'current_stock': double.tryParse(stockCtrl.text) ?? 0.0,
-                    'min_stock': double.tryParse(minStockCtrl.text) ?? 0.0,
+                    'unit': unitCtrl.text.trim(),
+                    'quantity': double.tryParse(stockCtrl.text) ?? 0.0,
+                    'min_quantity': double.tryParse(minStockCtrl.text) ?? 0.0,
                     'unit_price': double.tryParse(priceCtrl.text) ?? 0.0,
                     if (locationCtrl.text.isNotEmpty) 'location': locationCtrl.text.trim(),
-                    'status': 'active',
+                    if (notesCtrl.text.isNotEmpty) 'notes': notesCtrl.text.trim(),
                   };
-
                   final ok = await prov.saveWarehouseItem(payload);
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted && ok) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم حفظ الصنف بنجاح.'), backgroundColor: AppTheme.successColor),
+                      SnackBar(
+                        content: Text(isEdit ? 'تم تحديث بيانات المادة بنجاح.' : 'تم إضافة المادة إلى المخزن.'),
+                        backgroundColor: AppTheme.successColor,
+                      ),
                     );
                   }
                 },
-                child: const Text('حفظ'),
               ),
             ],
           ),
@@ -170,15 +204,23 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
     );
   }
 
-  // ==================== حوار تسجيل حركة مخزنية ====================
-  void _showMoveDialog([WarehouseItemModel? defaultItem]) {
+  void _showMoveDialog() {
     final formKey = GlobalKey<FormState>();
-    final qtyCtrl = TextEditingController();
-    final notesCtrl = TextEditingController();
     final prov = context.read<ManagementProvider>();
+    if (prov.warehouseItems.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('يرجى إضافة مواد إلى المخزن أولاً قبل تسجيل حركة.'), backgroundColor: AppTheme.dangerColor),
+      );
+      return;
+    }
 
-    int? selectedItemId = defaultItem?.id ?? (prov.warehouseItems.isNotEmpty ? prov.warehouseItems.first.id : null);
-    String moveType = 'out'; // out = صرف لموقع, in = توريد للمخزن, return = إرجاع
+    int selectedItemId = prov.warehouseItems.first.id;
+    String moveType = 'in'; // in: وارد, out: صادر, adjust: تعديل رصيد
+    final qtyCtrl = TextEditingController(text: '1');
+    final priceCtrl = TextEditingController(text: prov.warehouseItems.first.unitPrice.toString());
+    final supplierCtrl = TextEditingController();
+    final invoiceCtrl = TextEditingController();
+    final reasonCtrl = TextEditingController();
     int? selectedSiteId = prov.sites.isNotEmpty ? prov.sites.first.id : null;
 
     showDialog(
@@ -187,84 +229,144 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
         builder: (ctx, setDialogState) => Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
-            title: const Text('تسجيل حركة مواد مخزنية'),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    DropdownButtonFormField<int>(
-                      value: selectedItemId,
-                      decoration: const InputDecoration(labelText: 'المادة / الصنف *'),
-                      items: prov.warehouseItems.map((i) => DropdownMenuItem(value: i.id, child: Text('${i.name} (رصيد: ${i.currentStock})'))).toList(),
-                      onChanged: (val) => setDialogState(() => selectedItemId = val),
-                      validator: (v) => v == null ? 'يرجى اختيار المادة' : null,
-                    ),
-                    const SizedBox(height: 10),
-                    DropdownButtonFormField<String>(
-                      value: moveType,
-                      decoration: const InputDecoration(labelText: 'نوع الحركة المخزنية'),
-                      items: const [
-                        DropdownMenuItem(value: 'out', child: Text('صرف إلى مشروع / موقع (Out)')),
-                        DropdownMenuItem(value: 'in', child: Text('توريد جديد إلى المستودع (In)')),
-                        DropdownMenuItem(value: 'return', child: Text('إرجاع مواد فائضة للمستودع (Return)')),
-                      ],
-                      onChanged: (val) {
-                        if (val != null) setDialogState(() => moveType = val);
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    if (moveType == 'out' || moveType == 'return') ...[
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(color: AppTheme.greenPale, borderRadius: BorderRadius.circular(8)),
+                  child: const Icon(Icons.swap_horiz_rounded, color: AppTheme.green, size: 20),
+                ),
+                const SizedBox(width: 10),
+                const Text(
+                  'تسجيل حركة مخزنية',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.ink),
+                ),
+              ],
+            ),
+            content: SizedBox(
+              width: 480,
+              child: SingleChildScrollView(
+                child: Form(
+                  key: formKey,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
                       DropdownButtonFormField<int>(
-                        value: selectedSiteId,
-                        decoration: const InputDecoration(labelText: 'الموقع المستهدف'),
-                        items: prov.sites.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name))).toList(),
-                        onChanged: (val) => setDialogState(() => selectedSiteId = val),
+                        value: selectedItemId,
+                        decoration: const InputDecoration(labelText: 'المادة *'),
+                        items: prov.warehouseItems
+                            .map((i) => DropdownMenuItem(
+                                  value: i.id,
+                                  child: Text('${i.code ?? ""} - ${i.name} (المتاح: ${i.currentStock} ${i.unit})',
+                                      overflow: TextOverflow.ellipsis),
+                                ))
+                            .toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() {
+                              selectedItemId = val;
+                              final itm = prov.warehouseItems.firstWhere((x) => x.id == val);
+                              priceCtrl.text = itm.unitPrice.toString();
+                            });
+                          }
+                        },
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<String>(
+                        value: moveType,
+                        decoration: const InputDecoration(labelText: 'نوع الحركة *'),
+                        items: const [
+                          DropdownMenuItem(value: 'in', child: Text('وارد (شراء / توريد)')),
+                          DropdownMenuItem(value: 'out', child: Text('صادر (صرف لموقع عمل)')),
+                          DropdownMenuItem(value: 'adjust', child: Text('تعديل رصيد (تسوية جردية)')),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) setDialogState(() => moveType = val);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: qtyCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'الكمية *'),
+                              validator: (v) => v == null || double.tryParse(v) == null || double.parse(v) <= 0 ? 'كمية غير صالحة' : null,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: TextFormField(
+                              controller: priceCtrl,
+                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                              decoration: const InputDecoration(labelText: 'سعر الوحدة'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      if (moveType == 'out') ...[
+                        DropdownButtonFormField<int>(
+                          value: selectedSiteId,
+                          decoration: const InputDecoration(labelText: 'موقع العمل المستهدف'),
+                          items: prov.sites
+                              .map((s) => DropdownMenuItem(value: s.id, child: Text(s.name)))
+                              .toList(),
+                          onChanged: (val) => setDialogState(() => selectedSiteId = val),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      if (moveType == 'in') ...[
+                        TextFormField(
+                          controller: supplierCtrl,
+                          decoration: const InputDecoration(labelText: 'المورد (Supplier)'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: invoiceCtrl,
+                          decoration: const InputDecoration(labelText: 'رقم الفاتورة (Invoice Number)'),
+                        ),
+                        const SizedBox(height: 12),
+                      ],
+                      TextFormField(
+                        controller: reasonCtrl,
+                        maxLines: 2,
+                        decoration: const InputDecoration(labelText: 'السبب / الملاحظات'),
+                      ),
                     ],
-                    TextFormField(
-                      controller: qtyCtrl,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'الكمية *'),
-                      validator: (v) {
-                        final q = double.tryParse(v ?? '');
-                        if (q == null || q <= 0) return 'أدخل كمية صحيحة أكبر من الصفر';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    TextFormField(
-                      controller: notesCtrl,
-                      decoration: const InputDecoration(labelText: 'رقم الفاتورة أو سبب الصرف والملاحظات'),
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
-              ElevatedButton(
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(backgroundColor: AppTheme.ink),
+                icon: const Icon(Icons.check_rounded, size: 18),
+                label: const Text('تسجيل الحركة'),
                 onPressed: () async {
                   if (!formKey.currentState!.validate()) return;
                   final payload = {
                     'item_id': selectedItemId,
+                    'type': moveType,
                     'move_type': moveType,
                     'quantity': double.tryParse(qtyCtrl.text) ?? 0.0,
-                    if (moveType != 'in') 'site_id': selectedSiteId,
-                    if (notesCtrl.text.isNotEmpty) 'notes': notesCtrl.text.trim(),
+                    'unit_price': double.tryParse(priceCtrl.text) ?? 0.0,
+                    if (moveType == 'out' && selectedSiteId != null) 'site_id': selectedSiteId,
+                    if (supplierCtrl.text.isNotEmpty) 'supplier': supplierCtrl.text.trim(),
+                    if (invoiceCtrl.text.isNotEmpty) 'invoice_number': invoiceCtrl.text.trim(),
+                    if (reasonCtrl.text.isNotEmpty) 'reason': reasonCtrl.text.trim(),
                   };
-
                   final ok = await prov.createWarehouseMove(payload);
                   if (ctx.mounted) Navigator.pop(ctx);
                   if (mounted && ok) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم تسجيل الحركة المخزنية بنجاح.'), backgroundColor: AppTheme.successColor),
+                      const SnackBar(content: Text('تم تسجيل الحركة وترحيل القيود بنجاح.'), backgroundColor: AppTheme.successColor),
                     );
                   }
                 },
-                child: const Text('تسجيل الحركة'),
               ),
             ],
           ),
@@ -273,18 +375,19 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
     );
   }
 
-  // ==================== حوار إضافة فئة مخزنية ====================
-  void _showCategoryDialog() {
+  void _showCategoryDialog([WarehouseCategoryModel? category]) {
     final formKey = GlobalKey<FormState>();
-    final nameCtrl = TextEditingController();
-    final descCtrl = TextEditingController();
+    final nameCtrl = TextEditingController(text: category?.name);
+    final descCtrl = TextEditingController(text: category?.description);
+    final isEdit = category != null;
 
     showDialog(
       context: context,
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          title: const Text('إضافة فئة تصنيف جديدة للمستودع'),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          title: Text(isEdit ? 'تعديل فئة' : 'إضافة فئة مواد جديدة'),
           content: Form(
             key: formKey,
             child: Column(
@@ -292,7 +395,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
               children: [
                 TextFormField(
                   controller: nameCtrl,
-                  decoration: const InputDecoration(labelText: 'اسم الفئة (مثل: مواد عزل، كهربائيات) *'),
+                  decoration: const InputDecoration(labelText: 'اسم الفئة *'),
                   validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                 ),
                 const SizedBox(height: 10),
@@ -306,9 +409,11 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.ink),
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
                 final ok = await context.read<ManagementProvider>().saveWarehouseCategory({
+                  if (isEdit) 'id': category.id,
                   'name': nameCtrl.text.trim(),
                   if (descCtrl.text.isNotEmpty) 'description': descCtrl.text.trim(),
                 });
@@ -330,317 +435,618 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppTheme.paper,
       appBar: AppBar(
-        title: const Text('المستودع والمخزون والمواد'),
+        title: const Text('المخزن'),
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: AppTheme.cyan,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
           tabs: const [
-            Tab(icon: Icon(Icons.inventory_2_rounded), text: 'أصناف المواد'),
-            Tab(icon: Icon(Icons.swap_horiz_rounded), text: 'حركات الصرف والتوريد'),
-            Tab(icon: Icon(Icons.category_rounded), text: 'فئات التصنيف'),
+            Tab(icon: Icon(Icons.dashboard_outlined, size: 20), text: 'لوحة المخزن'),
+            Tab(icon: Icon(Icons.inventory_2_outlined, size: 20), text: 'إدارة المواد'),
+            Tab(icon: Icon(Icons.swap_horiz_rounded, size: 20), text: 'حركات المخزن'),
           ],
         ),
       ),
       body: TabBarView(
         controller: _tabController,
         children: [
+          _buildOverviewTab(),
           _buildItemsTab(),
           _buildMovesTab(),
-          _buildCategoriesTab(),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab_warehouse_screen',
         onPressed: () {
-          if (_tabController.index == 0) {
-            _showItemDialog();
-          } else if (_tabController.index == 1) {
+          if (_tabController.index == 0 || _tabController.index == 2) {
             _showMoveDialog();
           } else {
-            _showCategoryDialog();
+            _showItemDialog();
           }
         },
         icon: const Icon(Icons.add_rounded),
-        label: Text(_tabController.index == 0
-            ? 'إضافة صنف'
-            : _tabController.index == 1
-                ? 'حركة مواد'
-                : 'فئة جديدة'),
-        backgroundColor: const Color(0xFF0F172A),
+        label: Text(_tabController.index == 1 ? 'إضافة مادة' : 'حركة جديدة'),
+        backgroundColor: AppTheme.ink,
         foregroundColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildOverviewTab() {
+    final prov = context.watch<ManagementProvider>();
+
+    if (prov.warehouseState == LoadingState.loading && prov.warehouseItems.isEmpty) {
+      return const LoadingWidget(message: 'جاري تحميل بيانات المخزن...');
+    }
+
+    final items = prov.warehouseItems;
+    final lowItems = items.where((i) => i.isLowStock).toList();
+    final totalValue = items.fold<double>(0.0, (acc, item) => acc + item.totalValue);
+    final categoriesCount = prov.warehouseCategories.length;
+    final moves = prov.warehouseMoves.take(8).toList();
+
+    return RefreshIndicator(
+      onRefresh: () => prov.fetchWarehouseData(),
+      color: AppTheme.ink,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryCard(
+                    label: 'مواد نشطة',
+                    value: '${items.length}',
+                    icon: Icons.inventory_2_rounded,
+                    accent: AppTheme.cyan,
+                    tint: AppTheme.cyanPale,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSummaryCard(
+                    label: 'مواد منخفضة',
+                    value: '${lowItems.length}',
+                    icon: Icons.warning_amber_rounded,
+                    accent: AppTheme.amber,
+                    tint: AppTheme.amberPale,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryCard(
+                    label: 'قيمة المخزون',
+                    value: ArabicHelpers.formatCurrency(totalValue),
+                    icon: Icons.account_balance_wallet_rounded,
+                    accent: AppTheme.green,
+                    tint: AppTheme.greenPale,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _buildSummaryCard(
+                    label: 'الفئات',
+                    value: '$categoriesCount',
+                    icon: Icons.grid_view_rounded,
+                    accent: AppTheme.ink,
+                    tint: const Color(0xFFE2E8F0),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.line),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.warning_rounded, color: AppTheme.amber, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'مواد عند حد إعادة الطلب',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.ink),
+                          ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: () => _tabController.animateTo(1),
+                        child: const Text('إدارة المواد', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  if (lowItems.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: Text('جميع المواد فوق الحد الأدنى المطلوب', style: TextStyle(color: AppTheme.muted, fontSize: 13)),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: lowItems.length,
+                      separatorBuilder: (_, __) => const Divider(height: 12),
+                      itemBuilder: (ctx, i) {
+                        final item = lowItems[i];
+                        return Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: AppTheme.paper, borderRadius: BorderRadius.circular(4)),
+                              child: Text(item.code ?? '#', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(color: AppTheme.redPale, borderRadius: BorderRadius.circular(6)),
+                              child: Text(
+                                '${item.currentStock} ${item.unit}',
+                                style: const TextStyle(color: AppTheme.red, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text('الحد: ${item.minStock}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                          ],
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.line),
+              ),
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Row(
+                        children: [
+                          Icon(Icons.history_rounded, color: AppTheme.cyan, size: 20),
+                          SizedBox(width: 8),
+                          Text(
+                            'آخر الحركات المسجلة',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppTheme.ink),
+                          ),
+                        ],
+                      ),
+                      TextButton(
+                        onPressed: () => _tabController.animateTo(2),
+                        child: const Text('سجل الحركات', style: TextStyle(fontSize: 12)),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 16),
+                  if (moves.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Center(
+                        child: Text('لا توجد حركات مسجلة حتى الآن', style: TextStyle(color: AppTheme.muted, fontSize: 13)),
+                      ),
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: moves.length,
+                      separatorBuilder: (_, __) => const Divider(height: 12),
+                      itemBuilder: (ctx, i) {
+                        final m = moves[i];
+                        final isIn = m.moveType.toLowerCase() == 'in';
+                        return Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: isIn ? AppTheme.greenPale : AppTheme.amberPale,
+                                shape: BoxShape.circle,
+                              ),
+                              child: Icon(
+                                isIn ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded,
+                                color: isIn ? AppTheme.green : AppTheme.amber,
+                                size: 14,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(m.itemName ?? 'مادة', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  Text(m.moveTypeLabel, style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                                ],
+                              ),
+                            ),
+                            Text('${m.quantity}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          ],
+                        );
+                      },
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildItemsTab() {
     final prov = context.watch<ManagementProvider>();
+    final allItems = prov.warehouseItems;
+    final items = _filterOnlyLowStock ? allItems.where((i) => i.isLowStock).toList() : allItems;
 
-    if (prov.warehouseState == LoadingState.loading && prov.warehouseItems.isEmpty) {
-      return const LoadingWidget(message: 'جاري تحميل أصناف المخزن...');
-    }
-
-    if (prov.warehouseState == LoadingState.error && prov.warehouseItems.isEmpty) {
-      return ErrorView(message: prov.warehouseError ?? 'تعذر تحميل المخزن', onRetry: () => prov.fetchWarehouseData());
-    }
-
-    if (prov.warehouseItems.isEmpty) {
-      return EmptyView(
-        title: 'المستودع فارغ',
-        message: 'أضف المواد الإنشائية والأصناف لمتابعة الأرصدة وحركات الصرف للمشاريع.',
-        icon: Icons.inventory_2_outlined,
-      );
-    }
-
-    final lowStockItems = prov.warehouseItems.where((i) => i.isLowStock).toList();
-
-    return RefreshIndicator(
-      onRefresh: () => prov.fetchWarehouseData(),
-      child: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          // تنبيه نقص المخزون إن وجد
-          if (lowStockItems.isNotEmpty) ...[
-            Container(
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.amber.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.amber.shade200),
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          color: Colors.white,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'إجمالي المواد: ${allItems.length}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.ink),
               ),
-              child: Row(
+              Row(
                 children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 24),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'يوجد ${lowStockItems.length} صنف وصل إلى أو تجاوز حد الطلب الأدنى! يرجى التوريد فوراً.',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.brown.shade800),
-                    ),
+                  FilterChip(
+                    label: const Text('نواقص فقط', style: TextStyle(fontSize: 11)),
+                    selected: _filterOnlyLowStock,
+                    selectedColor: AppTheme.amberPale,
+                    onSelected: (val) => setState(() => _filterOnlyLowStock = val),
+                  ),
+                  const SizedBox(width: 8),
+                  OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                    icon: const Icon(Icons.category_outlined, size: 14),
+                    label: const Text('الفئات', style: TextStyle(fontSize: 11)),
+                    onPressed: () => _showCategoriesBottomSheet(),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 14),
-          ],
-          ...prov.warehouseItems.map((item) {
-            return Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(14),
-                side: BorderSide(color: item.isLowStock ? Colors.orange.shade200 : Colors.grey.shade200),
-              ),
-              color: Colors.white,
-              margin: const EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF10B981).withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: const Icon(Icons.inventory_2_rounded, color: Color(0xFF10B981), size: 20),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+            ],
+          ),
+        ),
+        const Divider(height: 1),
+        Expanded(
+          child: items.isEmpty
+              ? EmptyView(
+                  title: 'لا توجد مواد مطابقة',
+                  message: _filterOnlyLowStock ? 'لا توجد مواد تحت حد الطلب حالياً' : 'أضف مواد وأصناف جديدة للمخزن',
+                  action: ElevatedButton(onPressed: () => _showItemDialog(), child: const Text('إضافة مادة')),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: items.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (ctx, i) {
+                    final item = items[i];
+                    return Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: item.isLowStock ? AppTheme.amber.withOpacity(0.5) : AppTheme.line),
+                      ),
+                      padding: const EdgeInsets.all(14),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
                             children: [
-                              Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF0F172A))),
-                              if (item.code != null || item.categoryName != null) ...[
-                                const SizedBox(height: 2),
-                                Text('${item.code ?? ""} • ${item.categoryName ?? ""}', style: const TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                              ],
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: AppTheme.paper, borderRadius: BorderRadius.circular(4)),
+                                child: Text(item.code ?? '#', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(item.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                decoration: BoxDecoration(
+                                  color: item.isLowStock ? AppTheme.amberPale : AppTheme.greenPale,
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Text(
+                                  '${item.currentStock} ${item.unit}',
+                                  style: TextStyle(
+                                    color: item.isLowStock ? AppTheme.amber : AppTheme.green,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
-                        ),
-                        if (item.isLowStock)
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(color: Colors.orange.shade100, borderRadius: BorderRadius.circular(10)),
-                            child: const Text('مخزون منخفض', style: TextStyle(fontSize: 10, color: Colors.deepOrange, fontWeight: FontWeight.bold)),
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text('الفئة: ${item.categoryName ?? "عام"}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                              Text('سعر الوحدة: ${ArabicHelpers.formatCurrency(item.unitPrice)}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                              Text('الإجمالي: ${ArabicHelpers.formatCurrency(item.totalValue)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.ink)),
+                            ],
                           ),
-                      ],
-                    ),
-                    const Divider(height: 20),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('الرصيد المتوفر', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                            const SizedBox(height: 2),
-                            Text('${item.currentStock} ${item.unit}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF0F172A))),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text('سعر الوحدة', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                            const SizedBox(height: 2),
-                            Text(ArabicHelpers.formatCurrency(item.unitPrice), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF10B981))),
-                          ],
-                        ),
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text('القيمة الإجمالية', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                            const SizedBox(height: 2),
-                            Text(ArabicHelpers.formatCurrency(item.totalValue), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Color(0xFF0284C7))),
-                          ],
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton.icon(
-                          icon: const Icon(Icons.edit_outlined, size: 16),
-                          label: const Text('تعديل'),
-                          onPressed: () => _showItemDialog(item),
-                        ),
-                        const SizedBox(width: 8),
-                        OutlinedButton.icon(
-                          style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF0284C7)),
-                          icon: const Icon(Icons.swap_horiz_rounded, size: 16),
-                          label: const Text('تسجيل صرف/توريد'),
-                          onPressed: () => _showMoveDialog(item),
-                        ),
-                      ],
+                          const Divider(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              TextButton.icon(
+                                style: TextButton.styleFrom(foregroundColor: AppTheme.cyan),
+                                icon: const Icon(Icons.edit_outlined, size: 14),
+                                label: const Text('تعديل', style: TextStyle(fontSize: 11)),
+                                onPressed: () => _showItemDialog(item),
+                              ),
+                              const SizedBox(width: 4),
+                              TextButton.icon(
+                                style: TextButton.styleFrom(foregroundColor: AppTheme.dangerColor),
+                                icon: const Icon(Icons.delete_outline, size: 14),
+                                label: const Text('تعطيل/حذف', style: TextStyle(fontSize: 11)),
+                                onPressed: () => _confirmDisableItem(item),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  void _confirmDisableItem(WarehouseItemModel item) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          title: const Text('تعطيل المادة المخزنية'),
+          content: Text('هل تريد تعطيل مادة "${item.name}"؟'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
+              onPressed: () async {
+                Navigator.pop(ctx);
+                final ok = await context.read<ManagementProvider>().setWarehouseItemStatus(item.id, 'inactive');
+                if (mounted && ok) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تم تعطيل المادة بنجاح.'), backgroundColor: AppTheme.successColor),
+                  );
+                }
+              },
+              child: const Text('تأكيد التعطيل'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCategoriesBottomSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(16))),
+      builder: (ctx) => Consumer<ManagementProvider>(
+        builder: (ctx, prov, _) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('فئات المواد المسجلة', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.ink, padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6)),
+                      icon: const Icon(Icons.add, size: 14),
+                      label: const Text('فئة جديدة', style: TextStyle(fontSize: 11)),
+                      onPressed: () {
+                        Navigator.pop(ctx);
+                        _showCategoryDialog();
+                      },
                     ),
                   ],
                 ),
-              ),
-            );
-          }),
-        ],
+                const Divider(height: 20),
+                if (prov.warehouseCategories.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 20),
+                    child: Center(child: Text('لا توجد فئات مسجلة', style: TextStyle(color: AppTheme.muted))),
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: prov.warehouseCategories.length,
+                    separatorBuilder: (_, __) => const Divider(height: 10),
+                    itemBuilder: (ctx, i) {
+                      final cat = prov.warehouseCategories[i];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        subtitle: cat.description != null ? Text(cat.description!, style: const TextStyle(fontSize: 11)) : null,
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            _showCategoryDialog(cat);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
 
   Widget _buildMovesTab() {
     final prov = context.watch<ManagementProvider>();
+    final moves = prov.warehouseMoves;
 
-    if (prov.warehouseMoves.isEmpty) {
+    if (moves.isEmpty) {
       return EmptyView(
         title: 'لا توجد حركات مخزنية',
-        message: 'سجلات الصرف والتوريد والإرجاع ستظهر هنا بالتفصيل.',
-        icon: Icons.history_rounded,
-      );
-    }
-
-    return RefreshIndicator(
-      onRefresh: () => prov.fetchWarehouseData(),
-      child: ListView.separated(
-        padding: const EdgeInsets.all(16),
-        itemCount: prov.warehouseMoves.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) {
-          final m = prov.warehouseMoves[index];
-          final isOut = m.moveType.toLowerCase() == 'out';
-
-          return Card(
-            elevation: 0,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
-              side: BorderSide(color: Colors.grey.shade200),
-            ),
-            color: Colors.white,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: (isOut ? Colors.orange : Colors.green).withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Icon(
-                      isOut ? Icons.arrow_outward_rounded : Icons.call_received_rounded,
-                      color: isOut ? Colors.orange.shade800 : Colors.green.shade800,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(m.itemName ?? 'صنف مخزني', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${m.moveTypeLabel} • ${m.siteName ?? "المستودع"}',
-                          style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
-                        ),
-                        if (m.notes != null) ...[
-                          const SizedBox(height: 2),
-                          Text(m.notes!, style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8))),
-                        ],
-                      ],
-                    ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        '${isOut ? "-" : "+"}${m.quantity}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                          color: isOut ? Colors.orange.shade800 : Colors.green.shade800,
-                        ),
-                      ),
-                      if (m.createdAt != null) ...[
-                        const SizedBox(height: 2),
-                        Text(m.createdAt!, style: const TextStyle(fontSize: 10, color: Color(0xFF94A3B8))),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildCategoriesTab() {
-    final prov = context.watch<ManagementProvider>();
-
-    if (prov.warehouseCategories.isEmpty) {
-      return EmptyView(
-        title: 'لا توجد فئات تصنيف',
-        message: 'أضف فئات مثل "مواد بناء"، "كهربائيات" لتنظيم المستودع.',
-        icon: Icons.category_outlined,
+        message: 'سجل حركات التوريد والصرف والتسوية الجردية',
+        action: ElevatedButton(onPressed: () => _showMoveDialog(), child: const Text('تسجيل حركة')),
       );
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: prov.warehouseCategories.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 10),
-      itemBuilder: (context, index) {
-        final cat = prov.warehouseCategories[index];
-        return Card(
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-          color: Colors.white,
-          child: ListTile(
-            leading: const CircleAvatar(backgroundColor: Color(0xFFF1F5F9), child: Icon(Icons.folder_outlined, color: Color(0xFF0F172A))),
-            title: Text(cat.name, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            subtitle: cat.description != null ? Text(cat.description!, style: const TextStyle(fontSize: 12)) : null,
+      padding: const EdgeInsets.all(12),
+      itemCount: moves.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (ctx, i) {
+        final m = moves[i];
+        final isIn = m.moveType.toLowerCase() == 'in';
+        final isAdjust = m.moveType.toLowerCase() == 'adjust';
+
+        Color badgeColor = isIn ? AppTheme.green : (isAdjust ? AppTheme.cyan : AppTheme.amber);
+        Color badgeBg = isIn ? AppTheme.greenPale : (isAdjust ? AppTheme.cyanPale : AppTheme.amberPale);
+
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppTheme.line),
+          ),
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(6)),
+                    child: Text(m.moveTypeLabel, style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(m.itemName ?? 'مادة مخزنية', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                  Text(
+                    '${m.quantity}',
+                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: badgeColor),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (m.siteName != null)
+                    Text('الموقع: ${m.siteName}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                  if (m.supplier != null)
+                    Text('المورد: ${m.supplier}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                  if (m.invoiceNumber != null)
+                    Text('فاتورة: ${m.invoiceNumber}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                  if (m.totalPrice > 0)
+                    Text('القيمة: ${ArabicHelpers.formatCurrency(m.totalPrice)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.ink)),
+                ],
+              ),
+              if (m.notes != null && m.notes!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text('السبب: ${m.notes}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+              ],
+              const Divider(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(m.createdAt ?? '', style: const TextStyle(fontSize: 10.5, color: AppTheme.muted)),
+                  Text('المسؤول: ${m.createdBy ?? "الإدارة"}', style: const TextStyle(fontSize: 10.5, color: AppTheme.muted)),
+                ],
+              ),
+            ],
           ),
         );
       },
     );
   }
+
+  Widget _buildSummaryCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color accent,
+    required Color tint,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppTheme.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: const TextStyle(fontSize: 11.5, color: AppTheme.muted)),
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(color: tint, borderRadius: BorderRadius.circular(6)),
+                child: Icon(icon, color: accent, size: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: accent),
+          ),
+        ],
+      ),
+    );
+  }
 }
+
+
+

@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -14,7 +14,7 @@ import '../users/users_screen.dart';
 import '../warehouse/warehouse_screen.dart';
 import '../work_plans/work_plans_screen.dart';
 
-/// الهيكل التنفيذي المتكامل لتطبيق المدير العام Maxlond Management
+/// الهيكل التنفيذي المتكامل لتطبيق المدير العام المطابق للوحة تحكم Just_admin
 class ManagementScaffold extends StatefulWidget {
   const ManagementScaffold({super.key});
 
@@ -49,10 +49,10 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
             children: [
               Icon(Icons.logout_rounded, color: AppTheme.dangerColor),
               SizedBox(width: 8),
-              Text('تسجيل خروج المدير'),
+              Text('تسجيل الخروج'),
             ],
           ),
-          content: const Text('هل أنت متأكد من إنهاء جلسة الإدارة وتسجيل الخروج؟'),
+          content: const Text('هل أنت متأكد من تسجيل الخروج؟'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
@@ -78,7 +78,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
     final mgmt = context.watch<ManagementProvider>();
     final unreadCount = mgmt.unreadNotificationsCount;
 
-    // الصفحات الثمانية التنفيذية للمدير العام فقط
+    // الصفحات التنفيذية الثمانية
     final List<Widget> pages = [
       DashboardScreen(onNavigateTab: _onTabSelected),
       const SitesScreen(),
@@ -90,29 +90,32 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
       const UsersScreen(),
     ];
 
-    // عناوين الصفحات
+    // أسماء الأقسام المختصرة والمطابقة لـ Just_admin
     final List<String> pageTitles = [
-      'لوحة المؤشرات',
-      'مواقع العمل الإنشائية',
-      'خطط العمل التنفيذية',
-      'مراجعة التقارير',
-      'الآليات والصيانة',
-      'المستودع والمخزن',
-      'المالية والحسابات',
-      'إدارة المستخدمين',
+      'لوحة التحكم',
+      'المواقع',
+      'خطط العمل',
+      'التقارير',
+      'الآليات',
+      'المخزن',
+      'الحسابات',
+      'المستخدمون',
     ];
 
     final isWideScreen = MediaQuery.of(context).size.width >= 840;
 
     return Scaffold(
+      backgroundColor: AppTheme.paper,
       appBar: AppBar(
+        backgroundColor: AppTheme.ink,
+        elevation: 0,
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: const Color(0xFF38BDF8).withValues(alpha: 0.2),
+                color: AppTheme.cyan.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.admin_panel_settings_rounded, size: 20, color: Color(0xFF38BDF8)),
@@ -124,7 +127,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
               children: [
                 const Text(
                   AppConstants.appName,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: Colors.white),
                 ),
                 Text(
                   pageTitles[_currentIndex],
@@ -135,13 +138,12 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
           ],
         ),
         actions: [
-          // شارة إشعار التنبيهات
           Stack(
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                tooltip: 'الإشعارات والتنبيهات',
+                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                tooltip: 'الإشعارات',
                 onPressed: () {
                   Navigator.push(
                     context,
@@ -156,7 +158,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                   child: Container(
                     padding: const EdgeInsets.all(4),
                     decoration: const BoxDecoration(
-                      color: Color(0xFFEF4444),
+                      color: AppTheme.red,
                       shape: BoxShape.circle,
                     ),
                     constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
@@ -169,9 +171,8 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                 ),
             ],
           ),
-          // زر الخروج
           IconButton(
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout_rounded, color: Colors.white),
             tooltip: 'تسجيل الخروج',
             onPressed: _confirmLogout,
           ),
@@ -183,15 +184,15 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
           if (auth.isDemoMode)
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: const Color(0xFF0284C7).withValues(alpha: 0.12),
+              color: AppTheme.cyanPale,
               child: Row(
                 children: [
-                  const Icon(Icons.science_rounded, size: 18, color: Color(0xFF0284C7)),
+                  const Icon(Icons.science_rounded, size: 18, color: AppTheme.cyan),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'الوضع التجريبي نشط (محاكاة المدير العام بدون خادم)',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
+                      'الوضع التجريبي نشط (محاكاة Just_admin بدون خادم)',
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.ink),
                     ),
                   ),
                   InkWell(
@@ -199,7 +200,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0F172A),
+                        color: AppTheme.ink,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
@@ -230,9 +231,10 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
           ? null
           : NavigationBar(
               selectedIndex: _currentIndex > 3 ? 4 : _currentIndex,
+              backgroundColor: Colors.white,
+              indicatorColor: AppTheme.cyanPale,
               onDestinationSelected: (idx) {
                 if (idx == 4) {
-                  // فتح درج الأقسام الإضافية
                   Scaffold.of(context).openDrawer();
                 } else {
                   _onTabSelected(idx);
@@ -240,28 +242,28 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
               },
               destinations: const [
                 NavigationDestination(
-                  icon: Icon(Icons.dashboard_outlined),
-                  selectedIcon: Icon(Icons.dashboard_rounded),
-                  label: 'المؤشرات',
+                  icon: Icon(Icons.grid_view_outlined),
+                  selectedIcon: Icon(Icons.grid_view_rounded, color: AppTheme.cyan),
+                  label: 'التحكم',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.apartment_outlined),
-                  selectedIcon: Icon(Icons.apartment_rounded),
+                  icon: Icon(Icons.location_on_outlined),
+                  selectedIcon: Icon(Icons.location_on_rounded, color: AppTheme.cyan),
                   label: 'المواقع',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.assignment_outlined),
-                  selectedIcon: Icon(Icons.assignment_rounded),
+                  selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.cyan),
                   label: 'الخطط',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.rate_review_outlined),
-                  selectedIcon: Icon(Icons.rate_review_rounded),
+                  icon: Icon(Icons.assignment_turned_in_outlined),
+                  selectedIcon: Icon(Icons.assignment_turned_in_rounded, color: AppTheme.cyan),
                   label: 'التقارير',
                 ),
                 NavigationDestination(
-                  icon: Icon(Icons.grid_view_rounded),
-                  selectedIcon: Icon(Icons.grid_view_rounded),
+                  icon: Icon(Icons.menu_rounded),
+                  selectedIcon: Icon(Icons.menu_rounded, color: AppTheme.cyan),
                   label: 'المزيد',
                 ),
               ],
@@ -275,46 +277,47 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
       onDestinationSelected: _onTabSelected,
       labelType: NavigationRailLabelType.all,
       backgroundColor: Colors.white,
+      indicatorColor: AppTheme.cyanPale,
       destinations: const [
         NavigationRailDestination(
-          icon: Icon(Icons.dashboard_outlined),
-          selectedIcon: Icon(Icons.dashboard_rounded),
-          label: Text('المؤشرات'),
+          icon: Icon(Icons.grid_view_outlined),
+          selectedIcon: Icon(Icons.grid_view_rounded, color: AppTheme.cyan),
+          label: Text('لوحة التحكم'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.apartment_outlined),
-          selectedIcon: Icon(Icons.apartment_rounded),
-          label: Text('مواقع العمل'),
+          icon: Icon(Icons.location_on_outlined),
+          selectedIcon: Icon(Icons.location_on_rounded, color: AppTheme.cyan),
+          label: Text('المواقع'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.assignment_outlined),
-          selectedIcon: Icon(Icons.assignment_rounded),
+          selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.cyan),
           label: Text('خطط العمل'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.rate_review_outlined),
-          selectedIcon: Icon(Icons.rate_review_rounded),
-          label: Text('مراجعة التقارير'),
+          icon: Icon(Icons.assignment_turned_in_outlined),
+          selectedIcon: Icon(Icons.assignment_turned_in_rounded, color: AppTheme.cyan),
+          label: Text('التقارير'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.precision_manufacturing_outlined),
-          selectedIcon: Icon(Icons.precision_manufacturing_rounded),
-          label: Text('الآليات والصيانة'),
+          icon: Icon(Icons.local_shipping_outlined),
+          selectedIcon: Icon(Icons.local_shipping_rounded, color: AppTheme.amber),
+          label: Text('الآليات'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.warehouse_outlined),
-          selectedIcon: Icon(Icons.warehouse_rounded),
-          label: Text('المستودع والمخزن'),
+          icon: Icon(Icons.inventory_2_outlined),
+          selectedIcon: Icon(Icons.inventory_2_rounded, color: AppTheme.green),
+          label: Text('المخزن'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.account_balance_outlined),
-          selectedIcon: Icon(Icons.account_balance_rounded),
-          label: Text('المالية والحسابات'),
+          icon: Icon(Icons.menu_book_outlined),
+          selectedIcon: Icon(Icons.menu_book_rounded, color: AppTheme.cyan),
+          label: Text('الحسابات'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.people_outline_rounded),
-          selectedIcon: Icon(Icons.people_rounded),
-          label: Text('إدارة المستخدمين'),
+          icon: Icon(Icons.group_outlined),
+          selectedIcon: Icon(Icons.group_rounded, color: AppTheme.cyan),
+          label: Text('المستخدمون'),
         ),
       ],
     );
@@ -332,11 +335,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
           children: [
             DrawerHeader(
               decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                ),
+                color: AppTheme.ink,
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -345,7 +344,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
+                      color: Colors.white.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF38BDF8), size: 30),
@@ -357,24 +356,24 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                   ),
                   const SizedBox(height: 2),
                   const Text(
-                    'لوحة الإدارة المركزية - Maxlond',
+                    'لوحة الإدارة المركزية - Just Admin',
                     style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
                   ),
                 ],
               ),
             ),
-            _buildDrawerTile(0, 'لوحة المؤشرات العامة', Icons.dashboard_rounded),
-            _buildDrawerTile(1, 'مواقع العمل الإنشائية والمشاريع', Icons.apartment_rounded),
-            _buildDrawerTile(2, 'خطط العمل التنفيذية والمهام', Icons.assignment_rounded),
-            _buildDrawerTile(3, 'مراجعة واعتماد التقارير الميدانية', Icons.rate_review_rounded),
-            _buildDrawerTile(4, 'أسطول الآليات وسجلات الصيانة', Icons.precision_manufacturing_rounded),
-            _buildDrawerTile(5, 'المستودع والمخزون وحركات الصرف', Icons.warehouse_rounded),
-            _buildDrawerTile(6, 'الإدارة المالية ودليل الحسابات والقيود', Icons.account_balance_rounded),
-            _buildDrawerTile(7, 'إدارة الكادر والمستخدمين والصلاحيات', Icons.people_rounded),
+            _buildDrawerTile(0, 'لوحة التحكم', Icons.grid_view_rounded),
+            _buildDrawerTile(1, 'المواقع', Icons.location_on_rounded),
+            _buildDrawerTile(2, 'خطط العمل', Icons.assignment_rounded),
+            _buildDrawerTile(3, 'التقارير', Icons.assignment_turned_in_rounded),
+            _buildDrawerTile(4, 'الآليات', Icons.local_shipping_rounded),
+            _buildDrawerTile(5, 'المخزن', Icons.inventory_2_rounded),
+            _buildDrawerTile(6, 'الحسابات', Icons.menu_book_rounded),
+            _buildDrawerTile(7, 'المستخدمون', Icons.group_rounded),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.notifications_outlined, color: Color(0xFF0F172A)),
-              title: const Text('الإشعارات والتنبيهات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              leading: const Icon(Icons.notifications_outlined, color: AppTheme.ink),
+              title: const Text('الإشعارات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
               onTap: () {
                 Navigator.pop(context);
                 Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
@@ -397,17 +396,17 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
   Widget _buildDrawerTile(int index, String title, IconData icon) {
     final isSelected = _currentIndex == index;
     return ListTile(
-      leading: Icon(icon, color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF64748B)),
+      leading: Icon(icon, color: isSelected ? AppTheme.cyan : AppTheme.muted),
       title: Text(
         title,
         style: TextStyle(
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? const Color(0xFF0284C7) : const Color(0xFF0F172A),
+          color: isSelected ? AppTheme.cyan : AppTheme.textPrimary,
           fontSize: 13,
         ),
       ),
       selected: isSelected,
-      selectedTileColor: const Color(0xFF0284C7).withValues(alpha: 0.08),
+      selectedTileColor: AppTheme.cyanPale,
       onTap: () {
         Navigator.pop(context);
         _onTabSelected(index);

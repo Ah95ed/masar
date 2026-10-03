@@ -1,87 +1,107 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-/// السمة البصرية لتطبيق SpacePoint (Material 3) بتصميم مدني وهندسي فخم
+/// الهوية البصرية الرسمية المطابقة للوحة تحكم الموقع Just_admin (CSS: app.css)
 class AppTheme {
   AppTheme._();
 
-  static const Color primaryColor = Color(0xFF1E3A5F); // أزرق كحلي هندسي
-  static const Color primaryLight = Color(0xFF2B5282);
-  static const Color primaryDark = Color(0xFF0F1E33);
+  // ألوان المنظومة الرسمية المستخرجة من Just_admin/assets/css/app.css
+  static const Color ink = Color(0xFF102B3F);        // --ink: اللون الكحلي الليلي الأساسي
+  static const Color inkSoft = Color(0xFF193E54);    // --ink-soft: كحلي ناعم للهيدر والبطاقات
+  static const Color cyan = Color(0xFF078DA5);       // --cyan: أزرق مائي ترند رئيسي
+  static const Color cyanPale = Color(0xFFE7F5F6);   // --cyan-pale
+  static const Color green = Color(0xFF13805D);      // --green: أخضر مالي واعتمادات
+  static const Color greenPale = Color(0xFFE6F5ED);  // --green-pale
+  static const Color amber = Color(0xFFB76B08);      // --amber: كهرماني للآليات والصيانة
+  static const Color amberPale = Color(0xFFFFF3DD);  // --amber-pale
+  static const Color red = Color(0xFFBD3F42);        // --red: أحمر للتقارير المعلقة والحذف
+  static const Color redPale = Color(0xFFFAE9E9);    // --red-pale
+  static const Color paper = Color(0xFFF4F7F8);      // --paper: خلفية الصفحات العامة
+  static const Color line = Color(0xFFDCE5E8);       // --line: الحدود والفواصل
+  static const Color muted = Color(0xFF647782);      // --muted: النصوص الثانوية والرمادية
+  static const Color white = Colors.white;           // --white
 
-  static const Color accentColor = Color(0xFFE5A93B); // أصفر إنشائي / كهرماني ذهبي
-  static const Color accentLight = Color(0xFFFBE8C3);
-
-  static const Color backgroundColor = Color(0xFFF8FAFC); // خلفية نظيفة وعصرية
+  // توافق مع الرموز المستعملة في التطبيق
+  static const Color primaryColor = ink;
+  static const Color primaryLight = inkSoft;
+  static const Color primaryDark = Color(0xFF0B1E2D);
+  static const Color accentColor = cyan;
+  static const Color accentLight = cyanPale;
+  static const Color backgroundColor = paper;
   static const Color surfaceColor = Colors.white;
   static const Color cardColor = Colors.white;
 
-  static const Color textPrimary = Color(0xFF1E293B);
-  static const Color textSecondary = Color(0xFF64748B);
-  static const Color textMuted = Color(0xFF94A3B8);
+  static const Color textPrimary = Color(0xFF203642); // لون نص الموقع الرسمي
+  static const Color textSecondary = muted;
+  static const Color textMuted = Color(0xFF8A9BA3);
 
-  static const Color successColor = Color(0xFF10B981);
-  static const Color warningColor = Color(0xFFF59E0B);
-  static const Color dangerColor = Color(0xFFEF4444);
-  static const Color infoColor = Color(0xFF3B82F6);
+  static const Color successColor = green;
+  static const Color warningColor = amber;
+  static const Color dangerColor = red;
+  static const Color infoColor = cyan;
 
   static ThemeData get lightTheme {
+    final cairoFont = GoogleFonts.cairo().fontFamily;
+
     return ThemeData(
       useMaterial3: true,
+      fontFamily: cairoFont,
       colorScheme: ColorScheme.fromSeed(
-        seedColor: primaryColor,
-        primary: primaryColor,
-        secondary: accentColor,
+        seedColor: ink,
+        primary: ink,
+        secondary: cyan,
         surface: surfaceColor,
-        error: dangerColor,
+        error: red,
         brightness: Brightness.light,
       ),
-      scaffoldBackgroundColor: backgroundColor,
-      fontFamily: 'Cairo', // يعمل بشكل افتراضي أو يستخدم خط النظام
-      appBarTheme: const AppBarTheme(
-        backgroundColor: primaryColor,
+      scaffoldBackgroundColor: paper,
+      appBarTheme: AppBarTheme(
+        backgroundColor: ink,
         foregroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          fontSize: 18,
+          fontFamily: cairoFont,
+          fontSize: 17,
           fontWeight: FontWeight.bold,
           color: Colors.white,
         ),
       ),
       cardTheme: CardThemeData(
         color: surfaceColor,
-        elevation: 1.5,
-        shadowColor: Colors.black.withOpacity(0.08),
+        elevation: 0,
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 0),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
-          side: BorderSide(color: Colors.grey.shade200, width: 1),
+          borderRadius: BorderRadius.circular(12),
+          side: const BorderSide(color: line, width: 1),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: ink,
           foregroundColor: Colors.white,
-          elevation: 1,
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(
-            fontSize: 15,
+          textStyle: TextStyle(
+            fontFamily: cairoFont,
+            fontSize: 14,
             fontWeight: FontWeight.bold,
           ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: primaryColor,
-          side: const BorderSide(color: primaryColor, width: 1.5),
+          foregroundColor: ink,
+          side: const BorderSide(color: line, width: 1.2),
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
           ),
-          textStyle: const TextStyle(
+          textStyle: TextStyle(
+            fontFamily: cairoFont,
             fontSize: 14,
             fontWeight: FontWeight.w600,
           ),
@@ -92,37 +112,37 @@ class AppTheme {
         fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: line),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: Colors.grey.shade300),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: line),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 2),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: cyan, width: 1.8),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: dangerColor, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: red, width: 1.4),
         ),
-        labelStyle: const TextStyle(color: textSecondary, fontSize: 14),
-        hintStyle: const TextStyle(color: textMuted, fontSize: 13),
+        labelStyle: const TextStyle(color: muted, fontSize: 13),
+        hintStyle: const TextStyle(color: textMuted, fontSize: 12),
       ),
-      dividerTheme: DividerThemeData(
-        color: Colors.grey.shade200,
+      dividerTheme: const DividerThemeData(
+        color: line,
         thickness: 1,
         space: 20,
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
         backgroundColor: Colors.white,
-        selectedItemColor: primaryColor,
-        unselectedItemColor: textSecondary,
-        elevation: 8,
+        selectedItemColor: cyan,
+        unselectedItemColor: muted,
+        elevation: 10,
         type: BottomNavigationBarType.fixed,
-        selectedLabelStyle: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-        unselectedLabelStyle: TextStyle(fontSize: 12),
+        selectedLabelStyle: TextStyle(fontFamily: cairoFont, fontWeight: FontWeight.bold, fontSize: 11),
+        unselectedLabelStyle: TextStyle(fontFamily: cairoFont, fontSize: 11),
       ),
     );
   }
