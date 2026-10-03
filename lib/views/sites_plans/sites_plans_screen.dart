@@ -369,6 +369,12 @@ class _SitesPlansScreenState extends State<SitesPlansScreen> with SingleTickerPr
         title: const Text('إدارة المواقع وخطط العمل'),
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: AppTheme.cyan,
+          indicatorWeight: 3.5,
+          labelColor: Colors.white,
+          unselectedLabelColor: const Color(0xFFCBD5E1),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
           tabs: const [
             Tab(icon: Icon(Icons.location_city_rounded), text: 'مواقع المشاريع'),
             Tab(icon: Icon(Icons.assignment_turned_in_rounded), text: 'خطط العمل التنفيذية'),

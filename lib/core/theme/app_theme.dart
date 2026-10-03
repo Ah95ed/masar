@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// الهوية البصرية الرسمية المطابقة للوحة تحكم الموقع Just_admin (CSS: app.css)
@@ -55,6 +55,22 @@ class AppTheme {
         brightness: Brightness.light,
       ),
       scaffoldBackgroundColor: paper,
+      tabBarTheme: TabBarThemeData(
+        indicatorColor: cyan,
+        indicatorSize: TabBarIndicatorSize.tab,
+        labelColor: Colors.white,
+        unselectedLabelColor: const Color(0xFFCBD5E1),
+        labelStyle: TextStyle(
+          fontFamily: cairoFont,
+          fontSize: 14,
+          fontWeight: FontWeight.bold,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: cairoFont,
+          fontSize: 13.5,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       appBarTheme: AppBarTheme(
         backgroundColor: ink,
         foregroundColor: Colors.white,

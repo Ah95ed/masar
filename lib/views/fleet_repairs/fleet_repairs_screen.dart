@@ -330,9 +330,15 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
         title: const Text('الآليات والأسطول والصيانة'),
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: AppTheme.cyan,
+          indicatorWeight: 3.5,
+          labelColor: Colors.white,
+          unselectedLabelColor: const Color(0xFFCBD5E1),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
           tabs: const [
-            Tab(icon: Icon(Icons.precision_manufacturing_rounded), text: 'أسطول الآليات والمعدات'),
-            Tab(icon: Icon(Icons.build_circle_rounded), text: 'سجلات الصيانة والإصلاح'),
+            Tab(icon: Icon(Icons.precision_manufacturing_rounded, size: 22), text: 'أسطول الآليات والمعدات'),
+            Tab(icon: Icon(Icons.build_circle_rounded, size: 22), text: 'سجلات الصيانة والإصلاح'),
           ],
         ),
       ),

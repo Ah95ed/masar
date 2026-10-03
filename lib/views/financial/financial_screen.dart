@@ -488,9 +488,15 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
         title: const Text('الإدارة المالية ودليل الحسابات'),
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: AppTheme.cyan,
+          indicatorWeight: 3.5,
+          labelColor: Colors.white,
+          unselectedLabelColor: const Color(0xFFCBD5E1),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
           tabs: const [
-            Tab(icon: Icon(Icons.account_tree_rounded), text: 'دليل الحسابات (Accounts)'),
-            Tab(icon: Icon(Icons.menu_book_rounded), text: 'قيود اليومية (Journal)'),
+            Tab(icon: Icon(Icons.account_tree_rounded, size: 22), text: 'دليل الحسابات (Accounts)'),
+            Tab(icon: Icon(Icons.menu_book_rounded, size: 22), text: 'قيود اليومية (Journal)'),
           ],
         ),
       ),

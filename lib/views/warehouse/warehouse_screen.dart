@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/arabic_helpers.dart';
@@ -441,8 +441,11 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: AppTheme.cyan,
+          indicatorWeight: 3.5,
           labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
+          unselectedLabelColor: const Color(0xFFCBD5E1),
+          labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
           tabs: const [
             Tab(icon: Icon(Icons.dashboard_outlined, size: 20), text: 'لوحة المخزن'),
             Tab(icon: Icon(Icons.inventory_2_outlined, size: 20), text: 'إدارة المواد'),
