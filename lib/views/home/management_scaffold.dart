@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
@@ -59,7 +60,9 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
               child: const Text('إلغاء'),
             ),
             ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerColor),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.dangerColor,
+              ),
               onPressed: () {
                 Navigator.pop(ctx);
                 context.read<AuthProvider>().logout();
@@ -127,7 +130,11 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                 color: AppTheme.cyan.withOpacity(0.2),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.admin_panel_settings_rounded, size: 20, color: Color(0xFF38BDF8)),
+              child: const Icon(
+                Icons.admin_panel_settings_rounded,
+                size: 20,
+                color: Color(0xFF38BDF8),
+              ),
             ),
             const SizedBox(width: 10),
             Column(
@@ -136,11 +143,19 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
               children: [
                 const Text(
                   AppConstants.appName,
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.5, color: Colors.white),
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                    color: Colors.white,
+                  ),
                 ),
                 Text(
                   pageTitles[_currentIndex],
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: Color(0xFF94A3B8),
+                  ),
                 ),
               ],
             ),
@@ -151,12 +166,17 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: const Icon(Icons.notifications_outlined, color: Colors.white),
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: Colors.white,
+                ),
                 tooltip: 'الإشعارات',
                 onPressed: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    MaterialPageRoute(
+                      builder: (_) => const NotificationsScreen(),
+                    ),
                   );
                 },
               ),
@@ -170,11 +190,18 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                       color: AppTheme.red,
                       shape: BoxShape.circle,
                     ),
-                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
                     child: Text(
                       '$unreadCount',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ),
@@ -196,25 +223,40 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
               color: AppTheme.cyanPale,
               child: Row(
                 children: [
-                  const Icon(Icons.science_rounded, size: 18, color: AppTheme.cyan),
+                  const Icon(
+                    Icons.science_rounded,
+                    size: 18,
+                    color: AppTheme.cyan,
+                  ),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
                       'الوضع التجريبي نشط (محاكاة Just_admin بدون خادم)',
-                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.ink),
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.ink,
+                      ),
                     ),
                   ),
                   InkWell(
                     onTap: () => auth.exitDemoMode(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: AppTheme.ink,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
                         'إنهاء التجربة',
-                        style: TextStyle(fontSize: 11, color: Colors.white, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                   ),
@@ -226,17 +268,14 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
               children: [
                 if (isWideScreen) _buildNavigationRail(),
                 Expanded(
-                  child: IndexedStack(
-                    index: _currentIndex,
-                    children: pages,
-                  ),
+                  child: IndexedStack(index: _currentIndex, children: pages),
                 ),
               ],
             ),
           ),
         ],
       ),
-      );
+    );
   }
 
   Widget _buildNavigationRail() {
@@ -264,12 +303,18 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
         ),
         NavigationRailDestination(
           icon: Icon(Icons.assignment_turned_in_outlined),
-          selectedIcon: Icon(Icons.assignment_turned_in_rounded, color: AppTheme.cyan),
+          selectedIcon: Icon(
+            Icons.assignment_turned_in_rounded,
+            color: AppTheme.cyan,
+          ),
           label: Text('التقارير'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.local_shipping_outlined),
-          selectedIcon: Icon(Icons.local_shipping_rounded, color: AppTheme.amber),
+          selectedIcon: Icon(
+            Icons.local_shipping_rounded,
+            color: AppTheme.amber,
+          ),
           label: Text('الآليات'),
         ),
         NavigationRailDestination(
@@ -302,9 +347,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
           padding: EdgeInsets.zero,
           children: [
             DrawerHeader(
-              decoration: const BoxDecoration(
-                color: AppTheme.ink,
-              ),
+              decoration: const BoxDecoration(color: AppTheme.ink),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -315,12 +358,20 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                       color: Colors.white.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.admin_panel_settings_rounded, color: Color(0xFF38BDF8), size: 30),
+                    child: const Icon(
+                      Icons.admin_panel_settings_rounded,
+                      color: Color(0xFF38BDF8),
+                      size: 30,
+                    ),
                   ),
                   const SizedBox(height: 10),
                   Text(
                     user?.displayName ?? 'المدير العام',
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   const Text(
@@ -340,16 +391,37 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
             _buildDrawerTile(7, 'المستخدمون', Icons.group_rounded),
             const Divider(),
             ListTile(
-              leading: const Icon(Icons.notifications_outlined, color: AppTheme.ink),
-              title: const Text('الإشعارات', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+              leading: const Icon(
+                Icons.notifications_outlined,
+                color: AppTheme.ink,
+              ),
+              title: const Text(
+                'الإشعارات',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationsScreen(),
+                  ),
+                );
               },
             ),
             ListTile(
-              leading: const Icon(Icons.logout_rounded, color: AppTheme.dangerColor),
-              title: const Text('تسجيل الخروج', style: TextStyle(color: AppTheme.dangerColor, fontWeight: FontWeight.bold, fontSize: 13)),
+              leading: const Icon(
+                Icons.logout_rounded,
+                color: AppTheme.dangerColor,
+              ),
+              title: const Text(
+                'تسجيل الخروج',
+                style: TextStyle(
+                  color: AppTheme.dangerColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
               onTap: () {
                 Navigator.pop(context);
                 _confirmLogout();
