@@ -110,6 +110,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
+                        isExpanded: true,
                         value: selectedCatId,
                         decoration: const InputDecoration(hintText: 'الفئة / التصنيف'),
                         items: prov.warehouseCategories
@@ -269,8 +270,12 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                         items: prov.warehouseItems
                             .map((i) => DropdownMenuItem(
                                   value: i.id,
-                                  child: Text('${i.code ?? ""} - ${i.name} (المتاح: ${i.currentStock} ${i.unit})',
-                                      overflow: TextOverflow.ellipsis),
+                                  child: Text(
+                                    '${i.code ?? ""} - ${i.name} (المتاح: ${i.currentStock} ${i.unit})',
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
                                 ))
                             .toList(),
                         onChanged: (val) {
@@ -285,6 +290,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                       ),
                       const SizedBox(height: 12),
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: moveType,
                         decoration: const InputDecoration(labelText: 'نوع الحركة *'),
                         items: const [
@@ -320,6 +326,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                       const SizedBox(height: 12),
                       if (moveType == 'out') ...[
                         DropdownButtonFormField<int>(
+                          isExpanded: true,
                           value: selectedSiteId,
                           decoration: const InputDecoration(labelText: 'موقع العمل المستهدف'),
                           items: prov.sites

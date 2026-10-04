@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/arabic_helpers.dart';
@@ -223,7 +223,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildAdminHero(String adminName) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.ink,
         borderRadius: BorderRadius.circular(14),
@@ -237,6 +237,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             padding: const EdgeInsets.all(10),
@@ -246,25 +247,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: const Icon(
               Icons.admin_panel_settings_rounded,
-              size: 32,
+              size: 28,
               color: Color(0xFF38BDF8),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
                   'أهلاً بك، $adminName',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 17,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 3),
-                Row(
+                const SizedBox(height: 5),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -273,7 +280,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Text(
-                        'لوحة الإدارة المركزية (Just Admin)',
+                        'الإدارة المركزية',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 10.5,
@@ -281,9 +288,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
                     const Text(
-                      'صلاحية كاملة • Android & Windows',
+                      'صلاحية كاملة (Admin)',
                       style: TextStyle(
                         color: Color(0xFF94A3B8),
                         fontSize: 11,

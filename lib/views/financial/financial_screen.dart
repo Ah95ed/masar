@@ -59,29 +59,22 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: TextFormField(
-                          controller: codeCtrl,
-                          decoration: const InputDecoration(hintText: 'رقم الحساب (مثال: 1010) *'),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
-                        ),
+                  TextFormField(
+                        controller: codeCtrl,
+                        style: const TextStyle(fontSize: 12.5),
+                        decoration: const InputDecoration(hintText: 'رقم الحساب (مثال: 1010) *'),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        flex: 2,
-                        child: TextFormField(
-                          controller: nameCtrl,
-                          decoration: const InputDecoration(hintText: 'اسم الحساب المالي *'),
-                          validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
-                        ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        controller: nameCtrl,
+                        style: const TextStyle(fontSize: 12.5),
+                        decoration: const InputDecoration(hintText: 'اسم الحساب المالي *'),
+                        validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                       ),
-                    ],
-                  ),
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: type,
                     decoration: const InputDecoration(hintText: 'نوع الحساب'),
                     items: const [
@@ -243,79 +236,124 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: dateCtrl,
-                                decoration: const InputDecoration(hintText: 'تاريخ القيد (YYYY-MM-DD) *'),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: DropdownButtonFormField<int>(
-                                value: selectedSiteId,
-                                decoration: const InputDecoration(hintText: 'المشروع المرتبط'),
-                                items: prov.sites.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, maxLines: 1))).toList(),
-                                onChanged: (val) => setDialogState(() => selectedSiteId = val),
-                              ),
-                            ),
-                          ],
+                        TextFormField(
+                          controller: dateCtrl,
+                          style: const TextStyle(fontSize: 12.5),
+                          decoration: const InputDecoration(hintText: 'تاريخ القيد (YYYY-MM-DD) *'),
+                        ),
+                        const SizedBox(height: 10),
+                        DropdownButtonFormField<int>(
+                          isExpanded: true,
+                          value: selectedSiteId,
+                          decoration: const InputDecoration(hintText: 'المشروع المرتبط (اختياري)'),
+                          items: prov.sites
+                              .map((s) => DropdownMenuItem(
+                                    value: s.id,
+                                    child: Text(s.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12)),
+                                  ))
+                              .toList(),
+                          onChanged: (val) => setDialogState(() => selectedSiteId = val),
                         ),
                         const SizedBox(height: 10),
                         TextFormField(
                           controller: descCtrl,
+                          style: const TextStyle(fontSize: 12.5),
                           decoration: const InputDecoration(labelText: 'البيان وشرح القيد المحاسبي *'),
                           validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                         ),
                         const SizedBox(height: 14),
                         const Text('أطراف القيد (المدين والدائن):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         const SizedBox(height: 8),
-                        ...lines.map((line) {
+                        ...lines.asMap().entries.map((entry) {
+                        final idx = entry.key;
+                        final line = entry.value;
 
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.grey.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: DropdownButtonFormField<int>(
-                                    value: line['account_id'],
-                                    decoration: const InputDecoration(labelText: 'الحساب', isDense: true),
-                                    items: prov.accounts.map((a) => DropdownMenuItem(value: a.id, child: Text('${a.code} - ${a.name}', maxLines: 1))).toList(),
-                                    onChanged: (v) => setDialogState(() => line['account_id'] = v),
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: DropdownButtonFormField<int>(
+                                      isExpanded: true,
+                                      value: line['account_id'],
+                                      decoration: const InputDecoration(
+                                        hintText: 'اختر الحساب',
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      ),
+                                      items: prov.accounts
+                                          .map((a) => DropdownMenuItem(
+                                                value: a.id,
+                                                child: Text(
+                                                  '${a.code} - ${a.name}',
+                                                  maxLines: 1,
+                                                  overflow: TextOverflow.ellipsis,
+                                                  style: const TextStyle(fontSize: 12),
+                                                ),
+                                              ))
+                                          .toList(),
+                                      onChanged: (v) => setDialogState(() => line['account_id'] = v),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  flex: 2,
-                                  child: TextFormField(
-                                    initialValue: line['debit'] > 0 ? line['debit'].toString() : '',
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(labelText: 'مدين', isDense: true),
-                                    onChanged: (v) => setDialogState(() => line['debit'] = double.tryParse(v) ?? 0.0),
+                                  if (lines.length > 2) ...[
+                                    const SizedBox(width: 4),
+                                    IconButton(
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      icon: const Icon(Icons.remove_circle_outline, color: Colors.red, size: 18),
+                                      tooltip: 'حذف الطرف',
+                                      onPressed: () {
+                                        setDialogState(() => lines.removeAt(idx));
+                                      },
+                                    ),
+                                  ],
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextFormField(
+                                      initialValue: line['debit'] > 0 ? line['debit'].toString() : '',
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      style: const TextStyle(fontSize: 12),
+                                      decoration: const InputDecoration(
+                                        hintText: 'مدين',
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      ),
+                                      onChanged: (v) => setDialogState(() => line['debit'] = double.tryParse(v) ?? 0.0),
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  flex: 2,
-                                  child: TextFormField(
-                                    initialValue: line['credit'] > 0 ? line['credit'].toString() : '',
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(labelText: 'دائن', isDense: true),
-                                    onChanged: (v) => setDialogState(() => line['credit'] = double.tryParse(v) ?? 0.0),
+                                  const SizedBox(width: 6),
+                                  Expanded(
+                                    child: TextFormField(
+                                      initialValue: line['credit'] > 0 ? line['credit'].toString() : '',
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      style: const TextStyle(fontSize: 12),
+                                      decoration: const InputDecoration(
+                                        hintText: 'دائن',
+                                        isDense: true,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                      ),
+                                      onChanged: (v) => setDialogState(() => line['credit'] = double.tryParse(v) ?? 0.0),
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
                         const SizedBox(height: 8),
                         // شريط توازن القيد
                         Container(

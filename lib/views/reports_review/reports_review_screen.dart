@@ -78,6 +78,7 @@ class _ReportsReviewScreenState extends State<ReportsReviewScreen> {
                       // الأعمال المنجزة
                       TextFormField(
                         controller: workDoneCtrl,
+                        style: const TextStyle(fontSize: 12.5),
                         maxLines: 3,
                         decoration: InputDecoration(
                           labelText: 'الأعمال المنجزة وسير التنفيذ *',
@@ -95,44 +96,45 @@ class _ReportsReviewScreenState extends State<ReportsReviewScreen> {
                             child: TextFormField(
                               controller: workersCtrl,
                               keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'عدد العمالة',
-                                prefixIcon: const Icon(Icons.people_outline_rounded),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              style: const TextStyle(fontSize: 12),
+                              decoration: const InputDecoration(
+                                hintText: 'العمالة',
+                                contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: TextFormField(
                               controller: machineryCtrl,
                               keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'عدد الآليات',
-                                prefixIcon: const Icon(Icons.precision_manufacturing_outlined),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              style: const TextStyle(fontSize: 12),
+                              decoration: const InputDecoration(
+                                hintText: 'الآليات',
+                                contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Expanded(
                             child: TextFormField(
                               controller: progressCtrl,
                               keyboardType: TextInputType.number,
-                              decoration: InputDecoration(
-                                labelText: 'نسبة الإنجاز %',
-                                prefixIcon: const Icon(Icons.percent_rounded),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                              style: const TextStyle(fontSize: 12),
+                              decoration: const InputDecoration(
+                                hintText: 'الإنجاز %',
+                                contentPadding: EdgeInsets.symmetric(horizontal: 6, vertical: 8),
                               ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
 
                       // المشاكل والمعوقات
                       TextFormField(
                         controller: issuesCtrl,
+                        style: const TextStyle(fontSize: 12.5),
                         maxLines: 2,
                         decoration: InputDecoration(
                           labelText: 'المعوقات والمشاكل الفنية (إن وجدت)',
@@ -144,6 +146,7 @@ class _ReportsReviewScreenState extends State<ReportsReviewScreen> {
                       // المواد المستهلكة
                       TextFormField(
                         controller: materialsCtrl,
+                        style: const TextStyle(fontSize: 12.5),
                         maxLines: 2,
                         decoration: InputDecoration(
                           labelText: 'المواد والخامات المستهلكة',
@@ -164,6 +167,7 @@ class _ReportsReviewScreenState extends State<ReportsReviewScreen> {
 
                       // حالة التقرير
                       DropdownButtonFormField<String>(
+                        isExpanded: true,
                         value: status,
                         decoration: InputDecoration(
                           labelText: 'حالة التقرير',
@@ -183,6 +187,7 @@ class _ReportsReviewScreenState extends State<ReportsReviewScreen> {
                       // توجيهات وملاحظات الإدارة
                       TextFormField(
                         controller: adminNotesCtrl,
+                        style: const TextStyle(fontSize: 12.5),
                         maxLines: 2,
                         decoration: InputDecoration(
                           labelText: 'ملاحظات وتوجيهات المدير العام',
