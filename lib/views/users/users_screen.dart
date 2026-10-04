@@ -47,15 +47,21 @@ class _UsersScreenState extends State<UsersScreen> {
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             title: Text(isNew ? 'إضافة حساب كادر جديد' : 'تعديل بيانات المستخدم'),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Form(
+                  key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<String>(
                       value: role,
-                      decoration: const InputDecoration(labelText: 'الدور الوظيفي والصلاحية *'),
+                      decoration: const InputDecoration(hintText: 'الدور الوظيفي والصلاحية *'),
                       items: const [
                         DropdownMenuItem(value: 'engineer', child: Text('مهندس موقع ميداني (Engineer)')),
                         DropdownMenuItem(value: 'accountant', child: Text('محاسب مالي (Accountant)')),
@@ -68,7 +74,7 @@ class _UsersScreenState extends State<UsersScreen> {
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: fullNameCtrl,
-                      decoration: const InputDecoration(labelText: 'الاسم الثلاثي الكامل *'),
+                      decoration: const InputDecoration(hintText: 'الاسم الثلاثي الكامل *'),
                       validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                     ),
                     const SizedBox(height: 10),
@@ -76,7 +82,7 @@ class _UsersScreenState extends State<UsersScreen> {
                       controller: usernameCtrl,
                       enabled: isNew, // اسم المستخدم لا يُعدل بعد الإنشاء
                       decoration: InputDecoration(
-                        labelText: 'اسم المستخدم للولوج (Username) *',
+                        hintText: 'اسم المستخدم للولوج (Username) *',
                         helperText: isNew ? 'حروف إنجليزية وأرقام بدون مسافات' : null,
                       ),
                       validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
@@ -122,16 +128,17 @@ class _UsersScreenState extends State<UsersScreen> {
                     ],
                     TextFormField(
                       controller: emailCtrl,
-                      decoration: const InputDecoration(labelText: 'البريد الإلكتروني'),
+                      decoration: const InputDecoration(hintText: 'البريد الإلكتروني (اختياري)'),
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: phoneCtrl,
-                      decoration: const InputDecoration(labelText: 'رقم الهاتف'),
+                      decoration: const InputDecoration(hintText: 'رقم الهاتف (اختياري)'),
                     ),
                   ],
                 ),
               ),
+            ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),

@@ -24,6 +24,9 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final p = context.read<ManagementProvider>();
       p.fetchWarehouseData();
@@ -72,9 +75,13 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                 ),
               ],
             ),
-            content: SizedBox(
-              width: 480,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Form(
                   key: formKey,
                   child: Column(
@@ -86,7 +93,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                             flex: 1,
                             child: TextFormField(
                               controller: codeCtrl,
-                              decoration: const InputDecoration(labelText: 'الكود (Code) *'),
+                              decoration: const InputDecoration(hintText: 'كود المادة (Code) *'),
                               validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                             ),
                           ),
@@ -95,7 +102,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                             flex: 2,
                             child: TextFormField(
                               controller: nameCtrl,
-                              decoration: const InputDecoration(labelText: 'اسم المادة *'),
+                              decoration: const InputDecoration(hintText: 'اسم المادة المخزنية *'),
                               validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                             ),
                           ),
@@ -104,7 +111,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                       const SizedBox(height: 12),
                       DropdownButtonFormField<int>(
                         value: selectedCatId,
-                        decoration: const InputDecoration(labelText: 'الفئة / التصنيف'),
+                        decoration: const InputDecoration(hintText: 'الفئة / التصنيف'),
                         items: prov.warehouseCategories
                             .map((c) => DropdownMenuItem(value: c.id, child: Text(c.name)))
                             .toList(),
@@ -116,7 +123,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                           Expanded(
                             child: TextFormField(
                               controller: unitCtrl,
-                              decoration: const InputDecoration(labelText: 'وحدة القياس'),
+                              decoration: const InputDecoration(hintText: 'وحدة القياس (مثال: طن، متر، كيس)'),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -124,7 +131,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                             child: TextFormField(
                               controller: stockCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'الكمية المتاحة'),
+                              decoration: const InputDecoration(hintText: 'الكمية الأولية / المتاحة'),
                             ),
                           ),
                         ],
@@ -136,7 +143,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                             child: TextFormField(
                               controller: minStockCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'حد إعادة الطلب'),
+                              decoration: const InputDecoration(hintText: 'حد إعادة الطلب (تنبيه النقص)'),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -144,7 +151,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                             child: TextFormField(
                               controller: priceCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'سعر الوحدة'),
+                              decoration: const InputDecoration(hintText: 'سعر الوحدة التقديري'),
                             ),
                           ),
                         ],
@@ -244,9 +251,13 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                 ),
               ],
             ),
-            content: SizedBox(
-              width: 480,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Form(
                   key: formKey,
                   child: Column(
@@ -292,7 +303,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                             child: TextFormField(
                               controller: qtyCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'الكمية *'),
+                              decoration: const InputDecoration(hintText: 'الكمية العددية *'),
                               validator: (v) => v == null || double.tryParse(v) == null || double.parse(v) <= 0 ? 'كمية غير صالحة' : null,
                             ),
                           ),
@@ -301,7 +312,7 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                             child: TextFormField(
                               controller: priceCtrl,
                               keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              decoration: const InputDecoration(labelText: 'سعر الوحدة'),
+                              decoration: const InputDecoration(hintText: 'سعر الوحدة التقديري'),
                             ),
                           ),
                         ],
@@ -464,14 +475,22 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'fab_warehouse_screen',
         onPressed: () {
-          if (_tabController.index == 0 || _tabController.index == 2) {
-            _showMoveDialog();
-          } else {
+          if (_tabController.index == 1) {
             _showItemDialog();
+          } else {
+            _showMoveDialog();
           }
         },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_tabController.index == 1 ? 'إضافة مادة' : 'حركة جديدة'),
+        icon: Icon(
+          _tabController.index == 1
+              ? Icons.add_box_rounded
+              : (_tabController.index == 0 ? Icons.swap_horiz_rounded : Icons.post_add_rounded),
+        ),
+        label: Text(
+          _tabController.index == 1
+              ? 'إضافة مادة جديدة'
+              : (_tabController.index == 0 ? 'حركة جديدة' : 'تسجيل حركة مخزنية'),
+        ),
         backgroundColor: AppTheme.ink,
         foregroundColor: Colors.white,
       ),

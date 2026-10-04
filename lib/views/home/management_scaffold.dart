@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -109,6 +109,15 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
       appBar: AppBar(
         backgroundColor: AppTheme.ink,
         elevation: 0,
+        leading: isWideScreen
+            ? null
+            : Builder(
+                builder: (ctx) => IconButton(
+                  icon: const Icon(Icons.menu_rounded, color: Colors.white),
+                  tooltip: 'القائمة الرئيسية',
+                  onPressed: () => Scaffold.of(ctx).openDrawer(),
+                ),
+              ),
         title: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -227,48 +236,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
           ),
         ],
       ),
-      bottomNavigationBar: isWideScreen
-          ? null
-          : NavigationBar(
-              selectedIndex: _currentIndex > 3 ? 4 : _currentIndex,
-              backgroundColor: Colors.white,
-              indicatorColor: AppTheme.cyanPale,
-              onDestinationSelected: (idx) {
-                if (idx == 4) {
-                  Scaffold.of(context).openDrawer();
-                } else {
-                  _onTabSelected(idx);
-                }
-              },
-              destinations: const [
-                NavigationDestination(
-                  icon: Icon(Icons.grid_view_outlined),
-                  selectedIcon: Icon(Icons.grid_view_rounded, color: AppTheme.cyan),
-                  label: 'التحكم',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.location_on_outlined),
-                  selectedIcon: Icon(Icons.location_on_rounded, color: AppTheme.cyan),
-                  label: 'المواقع',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.assignment_outlined),
-                  selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.cyan),
-                  label: 'الخطط',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.assignment_turned_in_outlined),
-                  selectedIcon: Icon(Icons.assignment_turned_in_rounded, color: AppTheme.cyan),
-                  label: 'التقارير',
-                ),
-                NavigationDestination(
-                  icon: Icon(Icons.menu_rounded),
-                  selectedIcon: Icon(Icons.menu_rounded, color: AppTheme.cyan),
-                  label: 'المزيد',
-                ),
-              ],
-            ),
-    );
+      );
   }
 
   Widget _buildNavigationRail() {

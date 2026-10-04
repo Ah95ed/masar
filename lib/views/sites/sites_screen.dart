@@ -68,9 +68,13 @@ class _SitesScreenState extends State<SitesScreen> {
                 ),
               ],
             ),
-            content: SizedBox(
-              width: 500,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Form(
                   key: formKey,
                   child: Column(
@@ -81,8 +85,7 @@ class _SitesScreenState extends State<SitesScreen> {
                       TextFormField(
                         controller: nameCtrl,
                         decoration: InputDecoration(
-                          labelText: 'اسم موقع العمل / المشروع *',
-                          prefixIcon: const Icon(Icons.apartment_rounded),
+                          hintText: 'اسم موقع العمل / المشروع *',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         validator: (v) => v == null || v.trim().isEmpty ? 'يرجى كتابة اسم الموقع' : null,
@@ -93,8 +96,7 @@ class _SitesScreenState extends State<SitesScreen> {
                       TextFormField(
                         controller: clientCtrl,
                         decoration: InputDecoration(
-                          labelText: 'العميل أو الجهة المستفيدة',
-                          prefixIcon: const Icon(Icons.person_outline_rounded),
+                          hintText: 'العميل أو الجهة المستفيدة',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
@@ -104,8 +106,7 @@ class _SitesScreenState extends State<SitesScreen> {
                       TextFormField(
                         controller: locationCtrl,
                         decoration: InputDecoration(
-                          labelText: 'الموقع الجغرافي / العنوان والمدينة',
-                          prefixIcon: const Icon(Icons.location_on_outlined),
+                          hintText: 'الموقع الجغرافي / العنوان والمدينة',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
@@ -115,8 +116,7 @@ class _SitesScreenState extends State<SitesScreen> {
                       TextFormField(
                         controller: workDateCtrl,
                         decoration: InputDecoration(
-                          labelText: 'تاريخ بدء العمل (YYYY-MM-DD)',
-                          prefixIcon: const Icon(Icons.calendar_today_outlined),
+                          hintText: 'تاريخ بدء العمل (YYYY-MM-DD)',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                       ),
@@ -129,8 +129,7 @@ class _SitesScreenState extends State<SitesScreen> {
                             child: TextFormField(
                               controller: startTimeCtrl,
                               decoration: InputDecoration(
-                                labelText: 'وقت البدء (صباحاً)',
-                                prefixIcon: const Icon(Icons.access_time_rounded),
+                                hintText: 'وقت البدء (مثال: 08:00)',
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
@@ -140,8 +139,7 @@ class _SitesScreenState extends State<SitesScreen> {
                             child: TextFormField(
                               controller: endTimeCtrl,
                               decoration: InputDecoration(
-                                labelText: 'وقت الانتهاء (مساءً)',
-                                prefixIcon: const Icon(Icons.timelapse_rounded),
+                                hintText: 'وقت الانتهاء (مثال: 17:00)',
                                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                               ),
                             ),
@@ -154,8 +152,7 @@ class _SitesScreenState extends State<SitesScreen> {
                       DropdownButtonFormField<String>(
                         value: status,
                         decoration: InputDecoration(
-                          labelText: 'حالة المشروع الحالية',
-                          prefixIcon: const Icon(Icons.flag_outlined),
+                          hintText: 'حالة المشروع الحالية',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         items: const [

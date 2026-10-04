@@ -25,6 +25,9 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final p = context.read<ManagementProvider>();
       p.fetchMachinery();
@@ -58,15 +61,21 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             title: Text(machine == null ? 'إضافة آلية / معدة جديدة' : 'تعديل بيانات الآلية'),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Form(
+                  key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     TextFormField(
                       controller: nameCtrl,
-                      decoration: const InputDecoration(labelText: 'اسم الآلية أو المعدة *'),
+                      decoration: const InputDecoration(hintText: 'اسم الآلية أو المعدة *'),
                       validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                     ),
                     const SizedBox(height: 10),
@@ -75,14 +84,14 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
                         Expanded(
                           child: TextFormField(
                             controller: codeCtrl,
-                            decoration: const InputDecoration(labelText: 'كود الآلية (Code)'),
+                            decoration: const InputDecoration(hintText: 'كود الآلية (Code)'),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextFormField(
                             controller: typeCtrl,
-                            decoration: const InputDecoration(labelText: 'نوع الآلية (حفارة، رافعة...)'),
+                            decoration: const InputDecoration(hintText: 'نوع الآلية (حفارة، شاحنة، رافعة...)'),
                           ),
                         ),
                       ],
@@ -93,14 +102,14 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
                         Expanded(
                           child: TextFormField(
                             controller: plateCtrl,
-                            decoration: const InputDecoration(labelText: 'رقم اللوحة / الشاسيه'),
+                            decoration: const InputDecoration(hintText: 'رقم اللوحة / الشاسيه'),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Expanded(
                           child: TextFormField(
                             controller: opCtrl,
-                            decoration: const InputDecoration(labelText: 'اسم السائق / المشغل'),
+                            decoration: const InputDecoration(hintText: 'اسم السائق / المشغل'),
                           ),
                         ),
                       ],
@@ -129,6 +138,7 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
                   ],
                 ),
               ),
+            ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
@@ -181,15 +191,21 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
           textDirection: TextDirection.rtl,
           child: AlertDialog(
             title: const Text('فتح أمر صيانة وإصلاح آلية'),
-            content: SingleChildScrollView(
-              child: Form(
-                key: formKey,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Form(
+                  key: formKey,
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<int>(
                       value: selectedMachineryId,
-                      decoration: const InputDecoration(labelText: 'الآلية المعنية *'),
+                      decoration: const InputDecoration(hintText: 'اختر الآلية المعنية *'),
                       items: prov.machinery
                           .map((m) => DropdownMenuItem(value: m.id, child: Text('${m.name} (${m.code ?? ""})')))
                           .toList(),
@@ -200,19 +216,19 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
                     TextFormField(
                       controller: issueCtrl,
                       maxLines: 2,
-                      decoration: const InputDecoration(labelText: 'وصف العطل أو المشكلة الفنية *'),
+                      decoration: const InputDecoration(hintText: 'وصف العطل أو المشكلة الفنية *'),
                       validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: workshopCtrl,
-                      decoration: const InputDecoration(labelText: 'اسم ورشة الصيانة أو الفني المسؤول'),
+                      decoration: const InputDecoration(hintText: 'اسم ورشة الصيانة أو الفني المسؤول'),
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
                       controller: costCtrl,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'التكلفة التقديرية للصيانة'),
+                      decoration: const InputDecoration(hintText: 'التكلفة التقديرية للصيانة'),
                     ),
                     const SizedBox(height: 10),
                     TextFormField(
@@ -223,6 +239,7 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
                   ],
                 ),
               ),
+            ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
@@ -272,7 +289,7 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
               children: [
                 DropdownButtonFormField<String>(
                   value: status,
-                  decoration: const InputDecoration(labelText: 'حالة الصيانة'),
+                  decoration: const InputDecoration(hintText: 'حالة الصيانة'),
                   items: const [
                     DropdownMenuItem(value: 'pending', child: Text('قيد الانتظار')),
                     DropdownMenuItem(value: 'in_progress', child: Text('جاري العمل والإصلاح')),
@@ -287,12 +304,12 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
                 TextFormField(
                   controller: costCtrl,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'التكلفة الفعلية النهائية'),
+                  decoration: const InputDecoration(hintText: 'التكلفة الفعلية النهائية'),
                 ),
                 const SizedBox(height: 10),
                 TextFormField(
                   controller: actionCtrl,
-                  decoration: const InputDecoration(labelText: 'تقرير ما تم تنفيذه'),
+                  decoration: const InputDecoration(hintText: 'تقرير ما تم تنفيذه'),
                 ),
               ],
             ),
@@ -358,8 +375,14 @@ class _FleetRepairsScreenState extends State<FleetRepairsScreen> with SingleTick
             _showRepairDialog();
           }
         },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_tabController.index == 0 ? 'إضافة آلية' : 'أمر صيانة'),
+        icon: Icon(
+          _tabController.index == 0
+              ? Icons.precision_manufacturing_rounded
+              : Icons.build_circle_rounded,
+        ),
+        label: Text(
+          _tabController.index == 0 ? 'إضافة آلية جديدة' : 'تسجيل أمر صيانة',
+        ),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
       ),

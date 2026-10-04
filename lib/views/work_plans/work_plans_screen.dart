@@ -69,9 +69,13 @@ class _WorkPlansScreenState extends State<WorkPlansScreen> {
                 ),
               ],
             ),
-            content: SizedBox(
-              width: 500,
+            content: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: 480,
+                maxHeight: MediaQuery.of(ctx).size.height * 0.72,
+              ),
               child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
                 child: Form(
                   key: formKey,
                   child: Column(
@@ -82,8 +86,7 @@ class _WorkPlansScreenState extends State<WorkPlansScreen> {
                       DropdownButtonFormField<int>(
                         value: selectedSiteId,
                         decoration: InputDecoration(
-                          labelText: 'موقع العمل المستهدف *',
-                          prefixIcon: const Icon(Icons.apartment_rounded),
+                          hintText: 'اختر موقع العمل المستهدف *',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         items: prov.sites
@@ -101,8 +104,7 @@ class _WorkPlansScreenState extends State<WorkPlansScreen> {
                       TextFormField(
                         controller: titleCtrl,
                         decoration: InputDecoration(
-                          labelText: 'عنوان الخطة أو المهمة *',
-                          prefixIcon: const Icon(Icons.assignment_outlined),
+                          hintText: 'عنوان الخطة أو المهمة التنفيذية *',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         validator: (v) => v == null || v.trim().isEmpty ? 'يرجى كتابة عنوان الخطة' : null,
@@ -113,8 +115,7 @@ class _WorkPlansScreenState extends State<WorkPlansScreen> {
                       DropdownButtonFormField<String>(
                         value: priority,
                         decoration: InputDecoration(
-                          labelText: 'مستوى الأولوية والضرورة',
-                          prefixIcon: const Icon(Icons.flag_rounded),
+                          hintText: 'مستوى الأولوية والضرورة',
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                         ),
                         items: const [

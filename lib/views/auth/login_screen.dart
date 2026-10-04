@@ -17,7 +17,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController(text: 'admin_maxlond');
   final _passwordController = TextEditingController(text: 'Admin@123456');
-  final _deviceInfoController = TextEditingController(text: AppConstants.defaultDeviceInfo);
 
   bool _obscurePassword = true;
 
@@ -25,7 +24,6 @@ class _LoginScreenState extends State<LoginScreen> {
   void dispose() {
     _usernameController.dispose();
     _passwordController.dispose();
-    _deviceInfoController.dispose();
     super.dispose();
   }
 
@@ -38,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final success = await authProvider.login(
       username: _usernameController.text,
       password: _passwordController.text,
-      deviceInfo: _deviceInfoController.text,
+      deviceInfo: 'Maxlond Management',
     );
 
     if (!mounted) return;
@@ -229,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     const SizedBox(height: 6),
                     const Text(
-                      'بوابة الإدارة العامة والمدير التنفيذي فقط',
+                      'لوحة الإدارة المركزية',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 14,
@@ -238,36 +236,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
-
-                    // تنبيه الصلاحية الصارمة
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFEF3C7),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFFDE68A)),
-                      ),
-                      child: const Row(
-                        children: [
-                          Icon(Icons.shield_outlined, size: 20, color: Color(0xFFB45309)),
-                          SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              'هذا التطبيق مقصور حصراً على رتبة المدير العام (Admin)، ويتم رفض دخول أي دور آخر.',
-                              style: TextStyle(fontSize: 12, color: Color(0xFF92400E), height: 1.3),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 24),
 
                     // حقل اسم المستخدم
                     TextFormField(
                       controller: _usernameController,
                       decoration: InputDecoration(
-                        labelText: 'اسم مستخدم المدير (Admin)',
-                        prefixIcon: const Icon(Icons.person_outline_rounded),
+                        hintText: 'اسم المستخدم أو البريد الإلكتروني',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         filled: true,
                         fillColor: Colors.white,
@@ -286,8 +261,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _passwordController,
                       obscureText: _obscurePassword,
                       decoration: InputDecoration(
-                        labelText: 'كلمة المرور',
-                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        hintText: 'كلمة المرور',
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         filled: true,
                         fillColor: Colors.white,
@@ -310,19 +284,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // حقل معلومات الجهاز
-                    TextFormField(
-                      controller: _deviceInfoController,
-                      readOnly: true,
-                      decoration: InputDecoration(
-                        labelText: 'معرف الجهاز المرتبط',
-                        prefixIcon: const Icon(Icons.devices_rounded),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                      ),
-                    ),
                     const SizedBox(height: 24),
 
                     // زر تسجيل الدخول
@@ -345,7 +306,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             )
                           : const Text(
-                              'تسجيل الدخول كمدير',
+                              'تسجيل الدخول',
                               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                             ),
                     ),
@@ -373,7 +334,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             },
                       icon: const Icon(Icons.play_circle_outline_rounded, color: Color(0xFF0284C7)),
                       label: const Text(
-                        'دخول تجريبي فوري بصلاحية المدير العام (Demo)',
+                        'دخول تجريبي (Demo)',
                         style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF0284C7)),
                       ),
                       style: OutlinedButton.styleFrom(

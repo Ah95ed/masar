@@ -23,6 +23,9 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      if (mounted) setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final p = context.read<ManagementProvider>();
       p.fetchFinancialData();
@@ -62,7 +65,7 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
                         flex: 1,
                         child: TextFormField(
                           controller: codeCtrl,
-                          decoration: const InputDecoration(labelText: 'رقم الحساب *'),
+                          decoration: const InputDecoration(hintText: 'رقم الحساب (مثال: 1010) *'),
                           validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                         ),
                       ),
@@ -71,7 +74,7 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
                         flex: 2,
                         child: TextFormField(
                           controller: nameCtrl,
-                          decoration: const InputDecoration(labelText: 'اسم الحساب *'),
+                          decoration: const InputDecoration(hintText: 'اسم الحساب المالي *'),
                           validator: (v) => v == null || v.trim().isEmpty ? 'مطلوب' : null,
                         ),
                       ),
@@ -80,7 +83,7 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
                   const SizedBox(height: 10),
                   DropdownButtonFormField<String>(
                     value: type,
-                    decoration: const InputDecoration(labelText: 'نوع الحساب'),
+                    decoration: const InputDecoration(hintText: 'نوع الحساب'),
                     items: const [
                       DropdownMenuItem(value: 'asset', child: Text('أصول (Asset)')),
                       DropdownMenuItem(value: 'liability', child: Text('خصوم والتزامات (Liability)')),
@@ -245,14 +248,14 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
                             Expanded(
                               child: TextFormField(
                                 controller: dateCtrl,
-                                decoration: const InputDecoration(labelText: 'تاريخ القيد *'),
+                                decoration: const InputDecoration(hintText: 'تاريخ القيد (YYYY-MM-DD) *'),
                               ),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
                               child: DropdownButtonFormField<int>(
                                 value: selectedSiteId,
-                                decoration: const InputDecoration(labelText: 'المشروع المرتبط'),
+                                decoration: const InputDecoration(hintText: 'المشروع المرتبط'),
                                 items: prov.sites.map((s) => DropdownMenuItem(value: s.id, child: Text(s.name, maxLines: 1))).toList(),
                                 onChanged: (val) => setDialogState(() => selectedSiteId = val),
                               ),
@@ -563,8 +566,14 @@ class _FinancialScreenState extends State<FinancialScreen> with SingleTickerProv
             _showCreateJournalEntryDialog();
           }
         },
-        icon: const Icon(Icons.add_rounded),
-        label: Text(_tabController.index == 0 ? 'إضافة حساب' : 'ترحيل قيد'),
+        icon: Icon(
+          _tabController.index == 0
+              ? Icons.account_balance_wallet_rounded
+              : Icons.menu_book_rounded,
+        ),
+        label: Text(
+          _tabController.index == 0 ? 'إضافة حساب جديد' : 'ترحيل قيد يومي',
+        ),
         backgroundColor: const Color(0xFF0F172A),
         foregroundColor: Colors.white,
       ),
