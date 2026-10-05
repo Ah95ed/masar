@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/arabic_helpers.dart';
@@ -379,10 +379,16 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
                   };
                   final ok = await prov.createWarehouseMove(payload);
                   if (ctx.mounted) Navigator.pop(ctx);
-                  if (mounted && ok) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم تسجيل الحركة وترحيل القيود بنجاح.'), backgroundColor: AppTheme.successColor),
-                    );
+                  if (mounted) {
+                    if (ok) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('تم تسجيل الحركة المخزنية بنجاح.'), backgroundColor: AppTheme.successColor),
+                      );
+                    } else if (prov.warehouseError != null) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(prov.warehouseError!), backgroundColor: AppTheme.dangerColor),
+                      );
+                    }
                   }
                 },
               ),

@@ -1,3 +1,4 @@
+﻿import '../core/network/api_exception.dart';
 import '../core/constants/app_constants.dart';
 import '../core/network/api_client.dart';
 import '../models/dashboard_model.dart';
@@ -252,7 +253,15 @@ class ManagementService {
     );
   }
 
-  Future<void> createWarehouseMove(Map<String, dynamic> moveData) async {
+  Future<void> createWarehouseMove(Map<String, dynamic> moveData, {double? currentStock}) async {
+    final type = moveData['type'] ?? moveData['move_type'];
+    final qty = (moveData['quantity'] as num?)?.toDouble() ?? 0.0;
+    if (type == 'out' && currentStock != null && qty > currentStock) {
+      throw ApiException(
+        message: 'لا يمكن صرف كمية ($qty) تتجاوز الرصيد المتوفر في المخزن ($currentStock).',
+        statusCode: 422,
+      );
+    }
     await apiClient.post(AppConstants.routeWarehouseMoveCreate, body: moveData);
   }
 
@@ -348,6 +357,23 @@ class ManagementService {
   }
 
   Future<void> createJournalEntry(Map<String, dynamic> entryData) async {
+    final lines = entryData['lines'] as List<dynamic>?;
+    if (lines != null && lines.isNotEmpty) {
+      double totalDebit = 0.0;
+      double totalCredit = 0.0;
+      for (final line in lines) {
+        if (line is Map<String, dynamic>) {
+          totalDebit += (line['debit'] as num?)?.toDouble() ?? 0.0;
+          totalCredit += (line['credit'] as num?)?.toDouble() ?? 0.0;
+        }
+      }
+      if ((totalDebit - totalCredit).abs() > 0.01) {
+        throw ApiException(
+          message: 'القيد المحاسبي غير متوازن: مجموع المدين ($totalDebit) لا يساوي مجموع الدائن ($totalCredit).',
+          statusCode: 422,
+        );
+      }
+    }
     await apiClient.post(AppConstants.routeJournalCreate, body: entryData);
   }
 

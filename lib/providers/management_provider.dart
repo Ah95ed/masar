@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../core/network/api_exception.dart';
 import '../models/dashboard_model.dart';
 import '../models/site_model.dart';
@@ -551,7 +551,9 @@ class ManagementProvider extends ChangeNotifier {
 
   Future<bool> createWarehouseMove(Map<String, dynamic> data) async {
     try {
-      await _service.createWarehouseMove(data);
+      final itemId = data['item_id'];
+      final currentItem = warehouseItems.where((i) => i.id == itemId).firstOrNull;
+      await _service.createWarehouseMove(data, currentStock: currentItem?.currentStock);
       await fetchWarehouseData();
       await fetchDashboard();
       return true;

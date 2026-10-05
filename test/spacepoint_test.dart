@@ -1,3 +1,4 @@
+﻿import 'package:masar/services/management_service.dart';
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -395,4 +396,93 @@ void main() {
       );
     });
   });
+
+  group('اختبارات العمليات المالية والمخزنية والإشعارات (Business Logic Validation)', () {
+    test('منع الصرف فوق الرصيد المخزني ورمي استثناء 422', () async {
+      final mockStorage = MockStorageService();
+      final mockClient = MockHttpClient((request) => http.Response(jsonEncode({"success": true}), 200));
+ final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
+ final mgmtService = ManagementService(apiClient: apiClient);
+
+ final moveData = {
+ 'item_id': 5,
+ 'type': 'out',
+ 'quantity': 50.0,
+ 'unit_price': 45000.0,
+ 'site_id': 12,
+ };
+
+ expect(
+ () => mgmtService.createWarehouseMove(moveData, currentStock: 20.0),
+ throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 422)),
+ );
+ });
+
+ test('التحقق من توازن القيد المحاسبي (مجموع المدين = مجموع الدائن)', () async {
+ final mockStorage = MockStorageService();
+      final mockClient = MockHttpClient((request) => http.Response(jsonEncode({"success": true}), 200));
+ final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
+ final mgmtService = ManagementService(apiClient: apiClient);
+
+ final unbalancedEntry = {
+ 'description': 'شراء مواد غير متوازن',
+ 'site_id': 12,
+ 'lines': [
+ {'account_id': 15, 'debit': 125000.0, 'credit': 0.0},
+ {'account_id': 2, 'debit': 0.0, 'credit': 100000.0},
+ ],
+ };
+
+ expect(
+ () => mgmtService.createJournalEntry(unbalancedEntry),
+ throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 422)),
+ );
+ });
+
+ test('تحديث حالة الصيانة وتغيير حالة الآلية', () async {
+ final mockStorage = MockStorageService();
+ Uri? capturedStatusUri;
+ String? capturedStatusBody;
+
+ final mockClient = MockHttpClient((request) {
+ capturedStatusUri = request.url;
+ if (request is http.Request) {
+ capturedStatusBody = request.body;
+ }
+ return http.Response(jsonEncode({'success': true}), 200, headers: {'content-type': 'application/json'});
+ });
+ final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
+ final mgmtService = ManagementService(apiClient: apiClient);
+
+ await mgmtService.setRepairStatus(repairId: 8, status: 'in_progress');
+ expect(capturedStatusUri.toString(), contains('route=repair-status'));
+ expect(capturedStatusBody, contains('in_progress'));
+ });
+
+ test('قراءة الإشعارات الفردية والجماعية', () async {
+ final mockStorage = MockStorageService();
+ Uri? capturedSingleUri;
+ Uri? capturedAllUri;
+
+ final mockClient = MockHttpClient((request) {
+ if (request.url.queryParameters['route'] == 'notification-read') {
+ capturedSingleUri = request.url;
+ return http.Response(jsonEncode({'success': true}), 200, headers: {'content-type': 'application/json'});
+ }
+ if (request.url.queryParameters['route'] == 'notification-read-all') {
+ capturedAllUri = request.url;
+ return http.Response(jsonEncode({'success': true}), 200, headers: {'content-type': 'application/json'});
+ }
+ return http.Response('{}', 404);
+ });
+ final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
+ final mgmtService = ManagementService(apiClient: apiClient);
+
+ await mgmtService.markNotificationRead(3);
+ expect(capturedSingleUri.toString(), contains('route=notification-read'));
+
+ await mgmtService.markAllNotificationsRead();
+ expect(capturedAllUri.toString(), contains('route=notification-read-all'));
+ });
+ });
 }
