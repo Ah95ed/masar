@@ -83,7 +83,7 @@ class ApiClient {
           .get(uri, headers: headers)
           .timeout(const Duration(seconds: 25));
 
-      return _processResponse(response);
+      return _processResponse(response, route: route);
     } on SocketException {
       throw ApiException(message: 'تعذر الاتصال بخادم النظام (aksat.shop). يرجى التأكد من تشغيل الإنترنت.', statusCode: 0);
     } on HandshakeException {
@@ -122,7 +122,7 @@ class ApiClient {
           )
           .timeout(const Duration(seconds: 25));
 
-      return _processResponse(response);
+      return _processResponse(response, route: route);
     } on SocketException {
       throw ApiException(message: 'تعذر الاتصال بخادم النظام (aksat.shop). يرجى التأكد من تشغيل الإنترنت.', statusCode: 0);
     } on HandshakeException {
@@ -138,7 +138,7 @@ class ApiClient {
   }
 
   /// معالجة استجابة الخادم وتفسير النجاح والخطأ
-  dynamic _processResponse(http.Response response) {
+  dynamic _processResponse(http.Response response, {String? route}) {
     dynamic decoded;
     try {
       if (response.body.isNotEmpty) {
@@ -153,9 +153,11 @@ class ApiClient {
 
     // التعامل مع رمز 401
     if (response.statusCode == 401) {
+      if (route == AppConstants.routeMe) {
       storageService.deleteToken();
       if (onSessionExpired != null) {
         onSessionExpired!();
+      }
       }
       throw ApiException.fromResponse(401, decoded);
     }
