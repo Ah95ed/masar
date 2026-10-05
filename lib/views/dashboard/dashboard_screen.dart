@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/arabic_helpers.dart';
@@ -365,25 +365,34 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildKpiHeader() {
-    return const Row(
+    Widget _buildKpiHeader() {
+    return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(
-          'المؤشرات التشغيلية للمشاريع والموارد',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.ink,
+        const Expanded(
+          child: Text(
+            'المؤشرات التشغيلية للمشاريع والموارد',
+            style: TextStyle(
+              fontSize: 14.5,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.ink,
+            ),
+            overflow: TextOverflow.ellipsis,
+            maxLines: 1,
           ),
         ),
+        const SizedBox(width: 8),
         Row(
-          children: [
-            Icon(Icons.fiber_manual_record, size: 9, color: AppTheme.green),
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.fiber_manual_record, size: 8, color: AppTheme.green),
             SizedBox(width: 4),
             Text(
               'تحديث متزامن',
-              style: TextStyle(fontSize: 11.5, color: AppTheme.muted),
+              style: TextStyle(
+                fontSize: 11,
+                color: AppTheme.textSecondary,
+              ),
             ),
           ],
         ),

@@ -142,65 +142,65 @@ class _AuthGateState extends State<AuthGate> {
 
     // 3. عند محاولة دخول دور غير مصرح (مهندس أو محاسب)
     if (auth.status == AuthStatus.accessDenied) {
-        return Scaffold(
-          backgroundColor: const Color(0xFFF8FAFC),
-          body: Center(
-            child: Padding(
-              padding: const EdgeInsets.all(28.0),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.gpp_bad_rounded,
-                      size: 56,
-                      color: Color(0xFFDC2626),
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(28.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(
+                    Icons.gpp_bad_rounded,
+                    size: 56,
+                    color: Color(0xFFDC2626),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'تم رفض الوصول (غير مصرح)',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  auth.errorMessage ?? 'هذا التطبيق مقصور حصراً على حساب المدير العام (Admin). يرجى استخدام تطبيق المهندسين أو المحاسبين.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Color(0xFF64748B),
+                    height: 1.5,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF0F172A),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 12,
                     ),
                   ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'تم رفض الوصول (غير مصرح)',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF0F172A),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    auth.errorMessage ?? 'هذا التطبيق مقصور حصراً على حساب المدير العام (Admin). يرجى استخدام تطبيق المهندسين أو المحاسبين.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF64748B),
-                      height: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0F172A),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    label: const Text('العودة لتسجيل الدخول كمدير'),
-                    onPressed: () {
-                      auth.logout();
-                    },
-                  ),
-                ],
-              ),
+                  icon: const Icon(Icons.arrow_back_rounded),
+                  label: const Text('العودة لتسجيل الدخول كمدير'),
+                  onPressed: () {
+                    auth.logout();
+                  },
+                ),
+              ],
             ),
           ),
+        ),
       );
     }
     return const LoginScreen();
