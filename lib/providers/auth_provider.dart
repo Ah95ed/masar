@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import '../core/demo/demo_service.dart';
 import '../core/network/api_exception.dart';
 import '../core/storage/secure_storage_service.dart';
@@ -167,6 +167,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// قراءة رابط الخادم
+  Future<String?> getSavedUsername() async => await _storageService.getUsername();
+
   Future<String> getBaseUrl() async {
     return await _storageService.getBaseUrl();
   }

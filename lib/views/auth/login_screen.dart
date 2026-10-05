@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/theme/app_theme.dart';
@@ -15,10 +15,25 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController(text: 'admin_maxlond');
-  final _passwordController = TextEditingController(text: 'Admin@123456');
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _obscurePassword = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedUsername();
+  }
+
+  Future<void> _loadSavedUsername() async {
+    final saved = await context.read<AuthProvider>().getSavedUsername();
+    if (saved != null && saved.isNotEmpty && mounted) {
+      setState(() {
+        _usernameController.text = saved;
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -64,98 +79,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showServerSettingsDialog() async {
-    final authProvider = context.read<AuthProvider>();
-    final currentUrl = await authProvider.getBaseUrl();
-    final urlController = TextEditingController(text: currentUrl);
-
-    if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Row(
-            children: [
-              Icon(Icons.dns_rounded, color: AppTheme.primaryColor),
-              SizedBox(width: 8),
-              Text('إعدادات نطاق الخادم (Domain)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-            ],
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'أدخل نطاق الخادم (Domain) أو الرابط الأساسي، حيث يتم توجيه مسارات الإدارة تلقائياً:',
-                style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: urlController,
-                textDirection: TextDirection.ltr,
-                decoration: InputDecoration(
-                  hintText: 'https://api.yourdomain.com',
-                  prefixIcon: const Icon(Icons.link_rounded),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-              ),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'المسارات المعتمدة بعد النشر:',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.blue),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      '• المصادقة: /api/auth.php?route=\n• الإدارة: /api/management.php?route=',
-                      style: TextStyle(fontSize: 11, color: Colors.black87),
-                      textDirection: TextDirection.ltr,
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('إلغاء'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                final newUrl = urlController.text.trim();
-                if (newUrl.isNotEmpty) {
-                  await authProvider.saveBaseUrl(newUrl);
-                  if (ctx.mounted) Navigator.pop(ctx);
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('تم تحديث نطاق الخادم بنجاح.'),
-                        backgroundColor: AppTheme.successColor,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('حفظ التعديل'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -166,13 +89,6 @@ class _LoginScreenState extends State<LoginScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.dns_outlined, color: AppTheme.primaryColor),
-            tooltip: 'تخصيص نطاق الخادم',
-            onPressed: _showServerSettingsDialog,
-          ),
-        ],
       ),
       body: SafeArea(
         child: Center(

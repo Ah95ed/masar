@@ -1,4 +1,4 @@
-/// ثوابت وتكوينات نظام Maxlond Management (إدارة مسار) - خاص بالإدارة والمدير
+﻿/// ثوابت وتكوينات نظام Maxlond Management (إدارة مسار) - خاص بالإدارة والمدير
 class AppConstants {
   AppConstants._();
 
@@ -8,7 +8,14 @@ class AppConstants {
   static const String appSubtitle = 'منظومة الإدارة العليا والرقابة الميدانية والمشاريع';
 
   // النطاق الافتراضي
-  static const String defaultDomain = 'https://api.maxlond.com';
+  // النطاق الأساسي الرسمي للنظام
+  static const String defaultDomain = 'https://aksat.shop';
+
+  // روابط الـ API الأساسية المعتمدة رسمياً
+  // مصادقة المستخدمين: https://aksat.shop/api/auth.php?route=
+  // عمليات المدير: https://aksat.shop/api/management.php?route=
+  static const String authBaseUrl = 'https://aksat.shop/api/auth.php?route=';
+  static const String managementBaseUrl = 'https://aksat.shop/api/management.php?route=';
 
   // مسارات Base URLs
   // https://DOMAIN/api/auth.php?route=

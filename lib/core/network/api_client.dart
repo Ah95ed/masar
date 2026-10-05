@@ -1,4 +1,4 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -28,10 +28,9 @@ class ApiClient {
 
   /// بناء رابط الطلب الكامل بناءً على النطاق المحفوظ
   Future<Uri> _buildUri(String route, [Map<String, String>? queryParams]) async {
-    final domain = await storageService.getDomain();
     final baseUrl = _isAuthRoute(route)
-        ? AppConstants.buildAuthUrl(domain)
-        : AppConstants.buildManagementUrl(domain);
+        ? AppConstants.authBaseUrl
+        : AppConstants.managementBaseUrl;
 
     final baseUri = Uri.parse(baseUrl);
     final mergedParams = Map<String, String>.from(baseUri.queryParameters);
