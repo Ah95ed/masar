@@ -1,7 +1,9 @@
 ﻿import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
+
 import 'core/constants/app_constants.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/secure_storage_service.dart';
@@ -19,7 +21,11 @@ class AppHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
     return super.createHttpClient(context)
-      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+      ..badCertificateCallback = (
+        X509Certificate cert,
+        String host,
+        int port,
+      ) => true;
   }
 }
 
@@ -52,6 +58,7 @@ void main() async {
     ),
   );
 }
+
 /// التطبيق الرئيسي - Maxlond Management (إدارة مسار)
 class SpacePointApp extends StatelessWidget {
   final AuthProvider? authProvider;
@@ -100,12 +107,14 @@ class SpacePointApp extends StatelessWidget {
     );
   }
 }
+
 /// بوابة توجيه المدير العام وفق حالة المصادقة والصلاحية
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
+
 class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
@@ -114,18 +123,25 @@ class _AuthGateState extends State<AuthGate> {
       context.read<AuthProvider>().checkAuth();
     });
   }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-    switch (auth.status) {
-      case AuthStatus.loading:
-      case AuthStatus.initial:
-        return const Scaffold(
-          body: LoadingWidget(message: 'جاري التحقق من جلسة المدير العام...'),
-        );
-      case AuthStatus.authenticated:
-        return const ManagementScaffold();
-      case AuthStatus.accessDenied:
+
+    // 1. عند فتح التطبيق لأول مرة: فحص الجلسة السابقة
+    if (auth.status == AuthStatus.initial) {
+      return const Scaffold(
+        body: LoadingWidget(message: 'جاري التحقق من جلسة المدير العام...'),
+      );
+    }
+
+    // 2. عند تسجيل الدخول بنجاح كمدير عام: التوجيه المباشر للصفحة الرئيسية
+    if (auth.isAuthenticated) {
+      return const ManagementScaffold();
+    }
+
+    // 3. عند محاولة دخول دور غير مصرح (مهندس أو محاسب)
+    if (auth.status == AuthStatus.accessDenied) {
         return Scaffold(
           backgroundColor: const Color(0xFFF8FAFC),
           body: Center(
@@ -185,9 +201,8 @@ class _AuthGateState extends State<AuthGate> {
               ),
             ),
           ),
-        );
-      case AuthStatus.unauthenticated:
-        return const LoginScreen();
+      );
     }
+    return const LoginScreen();
   }
 }
