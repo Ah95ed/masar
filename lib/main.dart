@@ -1,7 +1,7 @@
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
-
 import 'core/constants/app_constants.dart';
 import 'core/network/api_client.dart';
 import 'core/storage/secure_storage_service.dart';
@@ -14,35 +14,37 @@ import 'views/auth/login_screen.dart';
 import 'views/home/management_scaffold.dart';
 import 'views/widgets/loading_widget.dart';
 
+/// تجاوز فحص الشهادات ذاتية التوقيع لخادم النظام (aksat.shop)
+class AppHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() async {
+  HttpOverrides.global = AppHttpOverrides();
   WidgetsFlutterBinding.ensureInitialized();
-
   final storageService = SecureStorageService();
-
   late final ApiClient apiClient;
   late final AuthProvider authProvider;
-
   apiClient = ApiClient(
     storageService: storageService,
     onSessionExpired: () {
       authProvider.handleSessionExpired();
     },
   );
-
   final authService = AuthService(
     apiClient: apiClient,
     storageService: storageService,
   );
-
   final managementService = ManagementService(apiClient: apiClient);
-
   authProvider = AuthProvider(
     authService: authService,
     storageService: storageService,
   );
-
   final managementProvider = ManagementProvider(service: managementService);
-
   runApp(
     SpacePointApp(
       authProvider: authProvider,
@@ -50,20 +52,16 @@ void main() async {
     ),
   );
 }
-
 /// التطبيق الرئيسي - Maxlond Management (إدارة مسار)
 class SpacePointApp extends StatelessWidget {
   final AuthProvider? authProvider;
   final ManagementProvider? managementProvider;
-
   const SpacePointApp({super.key, this.authProvider, this.managementProvider});
-
   @override
   Widget build(BuildContext context) {
     final storage = SecureStorageService();
     late final ApiClient client;
     late final AuthProvider defaultAuth;
-
     client = ApiClient(
       storageService: storage,
       onSessionExpired: () => defaultAuth.handleSessionExpired(),
@@ -75,7 +73,6 @@ class SpacePointApp extends StatelessWidget {
     final defaultMgmt = ManagementProvider(
       service: ManagementService(apiClient: client),
     );
-
     final appContent = MaterialApp(
       title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
@@ -90,7 +87,6 @@ class SpacePointApp extends StatelessWidget {
       ],
       home: const AuthGate(),
     );
-
     return MultiProvider(
       providers: [
         ChangeNotifierProvider<AuthProvider>.value(
@@ -104,15 +100,12 @@ class SpacePointApp extends StatelessWidget {
     );
   }
 }
-
 /// بوابة توجيه المدير العام وفق حالة المصادقة والصلاحية
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
-
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
-
 class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
@@ -121,11 +114,9 @@ class _AuthGateState extends State<AuthGate> {
       context.read<AuthProvider>().checkAuth();
     });
   }
-
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
-
     switch (auth.status) {
       case AuthStatus.loading:
       case AuthStatus.initial:

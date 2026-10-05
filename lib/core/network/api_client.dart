@@ -85,7 +85,9 @@ class ApiClient {
 
       return _processResponse(response);
     } on SocketException {
-      throw ApiException.networkError();
+      throw ApiException(message: 'تعذر الاتصال بخادم النظام (aksat.shop). يرجى التأكد من تشغيل الإنترنت.', statusCode: 0);
+    } on HandshakeException {
+      throw ApiException(message: 'تعذر التحقق من الاتصال المشفر بالخادم (SSL/TLS).', statusCode: 0);
     } on TimeoutException {
       throw ApiException.timeout();
     } on FormatException {
@@ -122,7 +124,9 @@ class ApiClient {
 
       return _processResponse(response);
     } on SocketException {
-      throw ApiException.networkError();
+      throw ApiException(message: 'تعذر الاتصال بخادم النظام (aksat.shop). يرجى التأكد من تشغيل الإنترنت.', statusCode: 0);
+    } on HandshakeException {
+      throw ApiException(message: 'تعذر التحقق من الاتصال المشفر بالخادم (SSL/TLS).', statusCode: 0);
     } on TimeoutException {
       throw ApiException.timeout();
     } on FormatException {

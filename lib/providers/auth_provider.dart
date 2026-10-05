@@ -21,6 +21,8 @@ class AuthProvider extends ChangeNotifier {
   AuthStatus _status = AuthStatus.initial;
   UserModel? _currentUser;
   String? _errorMessage;
+  String? _loginStepMessage;
+  String? get loginStepMessage => _loginStepMessage;
 
   AuthProvider({
     required AuthService authService,
@@ -112,19 +114,26 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
+    _loginStepMessage = '1. جاري الاتصال بخادم النظام (aksat.shop)...';
     notifyListeners();
 
     try {
+      _loginStepMessage = '2. جاري إرسال بيانات الدخول وتوثيق الحساب...';
+      notifyListeners();
+
       final user = await _authService.login(
         username: username,
         password: password,
         deviceInfo: deviceInfo,
       );
+
+      _loginStepMessage = '3. تم التحقق بنجاح! جاري فتح لوحة المدير العام...';
       _currentUser = user;
       _status = AuthStatus.authenticated;
       notifyListeners();
       return true;
     } on ApiException catch (e) {
+      _loginStepMessage = null;
       if (e.statusCode == 403) {
         _status = AuthStatus.accessDenied;
         _errorMessage = e.message;
@@ -135,8 +144,9 @@ class AuthProvider extends ChangeNotifier {
       notifyListeners();
       return false;
     } catch (e) {
+      _loginStepMessage = null;
       _status = AuthStatus.unauthenticated;
-      _errorMessage = 'فشل تسجيل الدخول. يرجى التأكد من البيانات أو الاتصال بالخادم.';
+      _errorMessage = 'فشل تسجيل الدخول: $e';
       notifyListeners();
       return false;
     }
