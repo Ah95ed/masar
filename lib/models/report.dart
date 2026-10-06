@@ -1,4 +1,4 @@
-﻿class ReportExpense {
+class ReportExpense {
   final int id;
   final String itemName;
   final String category;
@@ -17,15 +17,29 @@
     this.notes,
   });
 
-  factory ReportExpense.fromJson(Map<String, dynamic> json) => ReportExpense(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    itemName: json['item_name']?.toString() ?? '',
-    category: json['category']?.toString() ?? 'other',
-    quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
-    unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
-    total: (json['total'] as num?)?.toDouble() ?? 0.0,
-    notes: json['notes']?.toString(),
-  );
+  factory ReportExpense.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? 0;
+    }
+
+    double parseDouble(dynamic v) {
+      if (v == null) return 0.0;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString()) ?? 0.0;
+    }
+
+    return ReportExpense(
+      id: parseInt(json['id']),
+      itemName: json['item_name']?.toString() ?? '',
+      category: json['category']?.toString() ?? 'other',
+      quantity: parseDouble(json['quantity']),
+      unitPrice: parseDouble(json['unit_price']),
+      total: parseDouble(json['total']),
+      notes: json['notes']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -53,13 +67,21 @@ class ReportReceipt {
     this.fileSize,
   });
 
-  factory ReportReceipt.fromJson(Map<String, dynamic> json) => ReportReceipt(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    filePath: json['file_path']?.toString() ?? '',
-    originalName: json['original_name']?.toString() ?? '',
-    fileType: json['file_type']?.toString(),
-    fileSize: (json['file_size'] as num?)?.toInt(),
-  );
+  factory ReportReceipt.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? 0;
+    }
+
+    return ReportReceipt(
+      id: parseInt(json['id']),
+      filePath: json['file_path']?.toString() ?? '',
+      originalName: json['original_name']?.toString() ?? '',
+      fileType: json['file_type']?.toString(),
+      fileSize: json['file_size'] != null ? parseInt(json['file_size']) : null,
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -133,6 +155,18 @@ class Report {
   }
 
   factory Report.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v, [int fallback = 0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? fallback;
+    }
+
+    double? parseDoubleOrNull(dynamic v) {
+      if (v == null) return null;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString());
+    }
+
     var rawExpenses = json['expenses'];
     List<ReportExpense> expList = [];
     if (rawExpenses is List) {
@@ -146,21 +180,21 @@ class Report {
     }
 
     return Report(
-      id: (json['id'] as num?)?.toInt() ?? 0,
-      siteId: (json['site_id'] as num?)?.toInt() ?? 0,
+      id: parseInt(json['id']),
+      siteId: parseInt(json['site_id']),
       siteName: json['site_name']?.toString() ?? json['site']?.toString(),
-      engineerId: (json['engineer_id'] as num?)?.toInt() ?? 0,
+      engineerId: parseInt(json['engineer_id']),
       engineerName: json['engineer_name']?.toString() ?? json['full_name']?.toString(),
       reportDate: json['report_date']?.toString() ?? '',
       weather: json['weather']?.toString(),
-      temperature: (json['temperature'] as num?)?.toDouble(),
-      workersCount: (json['workers_count'] as num?)?.toInt() ?? 0,
-      machineryCount: (json['machinery_count'] as num?)?.toInt() ?? 0,
+      temperature: parseDoubleOrNull(json['temperature']),
+      workersCount: parseInt(json['workers_count']),
+      machineryCount: parseInt(json['machinery_count']),
       workDone: json['work_done']?.toString() ?? '',
       issues: json['issues']?.toString(),
       materialsUsed: json['materials_used']?.toString(),
       safetyNotes: json['safety_notes']?.toString(),
-      progressPercent: (json['progress_percent'] as num?)?.toInt() ?? (json['progress'] as num?)?.toInt() ?? 0,
+      progressPercent: parseInt(json['progress_percent'], parseInt(json['progress'])),
       status: json['status']?.toString().toLowerCase() ?? 'submitted',
       adminNotes: json['admin_notes']?.toString(),
       expenses: expList,

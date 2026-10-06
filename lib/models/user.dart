@@ -1,4 +1,4 @@
-﻿class User {
+class User {
   final int id;
   final String fullName;
   final String username;
@@ -24,17 +24,31 @@
   bool get isApproved => approvalStatus.toLowerCase() == 'approved';
   bool get active => isActive == 1;
 
-  factory User.fromJson(Map<String, dynamic> json) => User(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    fullName: json['full_name']?.toString() ?? '',
-    username: json['username']?.toString() ?? '',
-    email: json['email']?.toString() ?? '',
-    role: json['role']?.toString() ?? '',
-    phone: json['phone']?.toString(),
-    specialization: json['specialization']?.toString(),
-    isActive: (json['is_active'] as num?)?.toInt() ?? 0,
-    approvalStatus: json['approval_status']?.toString() ?? 'approved',
-  );
+  factory User.fromJson(Map<String, dynamic> json) {
+    int parseId(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? 0;
+    }
+
+    int parseActive(dynamic v) {
+      if (v == null) return 0;
+      if (v == true || v == 1 || v == '1') return 1;
+      return 0;
+    }
+
+    return User(
+      id: parseId(json['id']),
+      fullName: json['full_name']?.toString() ?? json['name']?.toString() ?? '',
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      role: json['role']?.toString() ?? '',
+      phone: json['phone']?.toString(),
+      specialization: json['specialization']?.toString(),
+      isActive: parseActive(json['is_active']),
+      approvalStatus: json['approval_status']?.toString() ?? 'approved',
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/report.dart';
@@ -10,8 +10,9 @@ import 'report_detail_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   final AdminApi api;
+  final Widget? drawer;
 
-  const ReportsScreen({super.key, required this.api});
+  const ReportsScreen({super.key, required this.api, this.drawer});
 
   @override
   State<ReportsScreen> createState() => _ReportsScreenState();
@@ -87,6 +88,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('التقارير اليومية الميدانية'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar

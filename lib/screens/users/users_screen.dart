@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/user.dart';
@@ -11,8 +11,9 @@ import 'user_form_screen.dart';
 
 class UsersScreen extends StatefulWidget {
   final AdminApi api;
+  final Widget? drawer;
 
-  const UsersScreen({super.key, required this.api});
+  const UsersScreen({super.key, required this.api, this.drawer});
 
   @override
   State<UsersScreen> createState() => _UsersScreenState();
@@ -41,8 +42,23 @@ class _UsersScreenState extends State<UsersScreen> {
     try {
       final res = await widget.api.get('users');
       if (!mounted) return;
+      List rawList = [];
+      if (res is List) {
+        rawList = res;
+      } else if (res is Map) {
+        if (res['users'] is List) {
+          rawList = res['users'] as List;
+        } else if (res['data'] is List) {
+          rawList = res['data'] as List;
+        } else if (res['items'] is List) {
+          rawList = res['items'] as List;
+        }
+      }
       setState(() {
-        _users = (res as List).map((e) => User.fromJson(e)).toList();
+        _users = rawList
+            .whereType<Map>()
+            .map((e) => User.fromJson(Map<String, dynamic>.from(e)))
+            .toList();
         _loading = false;
       });
     } on ApiException catch (e) {
@@ -130,7 +146,7 @@ class _UsersScreenState extends State<UsersScreen> {
 
   List<User> get _filteredUsers {
     return _users.where((u) {
-      final matchesRole = _filterRole == 'all' || u.role == _filterRole;
+      final matchesRole = _filterRole == 'all' || u.role.trim().toLowerCase() == _filterRole.trim().toLowerCase();
       final matchesSearch = _searchQuery.isEmpty ||
           u.fullName.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           u.username.toLowerCase().contains(_searchQuery.toLowerCase()) ||
@@ -142,6 +158,7 @@ class _UsersScreenState extends State<UsersScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('إدارة المستخدمين وفريق العمل'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar

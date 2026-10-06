@@ -1,4 +1,4 @@
-﻿class Site {
+class Site {
   final int id;
   final String code;
   final String name;
@@ -47,20 +47,34 @@
     }
   }
 
-  factory Site.fromJson(Map<String, dynamic> json) => Site(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    code: json['code']?.toString() ?? '',
-    name: json['name']?.toString() ?? '',
-    clientName: json['client_name']?.toString() ?? '',
-    workDate: json['work_date']?.toString(),
-    startTime: json['start_time']?.toString(),
-    endTime: json['end_time']?.toString(),
-    location: json['location']?.toString(),
-    budget: (json['budget'] as num?)?.toDouble() ?? 0.0,
-    status: json['status']?.toString().toLowerCase() ?? 'active',
-    managerId: (json['manager_id'] as num?)?.toInt(),
-    description: json['description']?.toString(),
-  );
+  factory Site.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v, [int fallback = 0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? fallback;
+    }
+
+    double parseDouble(dynamic v, [double fallback = 0.0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString()) ?? fallback;
+    }
+
+    return Site(
+      id: parseInt(json['id']),
+      code: json['code']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      clientName: json['client_name']?.toString() ?? '',
+      workDate: json['work_date']?.toString(),
+      startTime: json['start_time']?.toString(),
+      endTime: json['end_time']?.toString(),
+      location: json['location']?.toString(),
+      budget: parseDouble(json['budget']),
+      status: json['status']?.toString().toLowerCase() ?? 'active',
+      managerId: json['manager_id'] != null ? parseInt(json['manager_id']) : null,
+      description: json['description']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

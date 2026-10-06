@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/task.dart';
@@ -11,8 +11,9 @@ import 'task_form_screen.dart';
 
 class TasksScreen extends StatefulWidget {
   final AdminApi api;
+  final Widget? drawer;
 
-  const TasksScreen({super.key, required this.api});
+  const TasksScreen({super.key, required this.api, this.drawer});
 
   @override
   State<TasksScreen> createState() => _TasksScreenState();
@@ -132,6 +133,7 @@ class _TasksScreenState extends State<TasksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('خطط العمل والتوجيهات'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar

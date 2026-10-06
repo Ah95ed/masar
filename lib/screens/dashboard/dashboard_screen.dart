@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../services/admin_api.dart';
@@ -10,11 +10,13 @@ import '../../widgets/error_state.dart';
 class DashboardScreen extends StatefulWidget {
   final AdminApi api;
   final Function(int tabIndex)? onNavigateTab;
+  final Widget? drawer;
 
   const DashboardScreen({
     super.key,
     required this.api,
     this.onNavigateTab,
+    this.drawer,
   });
 
   @override
@@ -66,6 +68,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final fullName = user?['full_name']?.toString() ?? 'المدير العام';
 
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('لوحة التحكم'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar حسب التعليمات الصارمة

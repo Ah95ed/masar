@@ -1,4 +1,4 @@
-﻿class WarehouseMove {
+class WarehouseMove {
   final int id;
   final int itemId;
   final String? itemCode;
@@ -61,28 +61,42 @@
     }
   }
 
-  factory WarehouseMove.fromJson(Map<String, dynamic> json) => WarehouseMove(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    itemId: (json['item_id'] as num?)?.toInt() ?? 0,
-    itemCode: json['item_code']?.toString(),
-    itemName: json['item_name']?.toString() ?? json['item']?.toString(),
-    type: json['type']?.toString().toLowerCase() ?? 'out',
-    quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
-    unit: json['unit']?.toString(),
-    unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
-    totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
-    siteId: (json['site_id'] as num?)?.toInt(),
-    siteName: json['site_name']?.toString() ?? json['site']?.toString(),
-    supplier: json['supplier']?.toString(),
-    invoiceNumber: json['invoice_number']?.toString(),
-    reason: json['reason']?.toString() ?? json['notes']?.toString(),
-    createdBy: json['created_by']?.toString() ?? json['full_name']?.toString(),
-    createdAt: json['created_at']?.toString(),
-    signatureId: (json['signature_id'] as num?)?.toInt(),
-    signedBy: json['signed_by']?.toString(),
-    signedAt: json['signed_at']?.toString(),
-    signatureHash: json['signature_hash']?.toString(),
-  );
+  factory WarehouseMove.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v, [int fallback = 0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? fallback;
+    }
+
+    double parseDouble(dynamic v, [double fallback = 0.0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString()) ?? fallback;
+    }
+
+    return WarehouseMove(
+      id: parseInt(json['id']),
+      itemId: parseInt(json['item_id']),
+      itemCode: json['item_code']?.toString(),
+      itemName: json['item_name']?.toString() ?? json['item']?.toString(),
+      type: json['type']?.toString().toLowerCase() ?? 'out',
+      quantity: parseDouble(json['quantity']),
+      unit: json['unit']?.toString(),
+      unitPrice: parseDouble(json['unit_price']),
+      totalPrice: parseDouble(json['total_price']),
+      siteId: json['site_id'] != null ? parseInt(json['site_id']) : null,
+      siteName: json['site_name']?.toString(),
+      supplier: json['supplier']?.toString(),
+      invoiceNumber: json['invoice_number']?.toString(),
+      reason: json['reason']?.toString(),
+      createdBy: json['created_by']?.toString(),
+      createdAt: json['created_at']?.toString(),
+      signatureId: json['signature_id'] != null ? parseInt(json['signature_id']) : null,
+      signedBy: json['signed_by']?.toString(),
+      signedAt: json['signed_at']?.toString(),
+      signatureHash: json['signature_hash']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -90,13 +104,9 @@
     'type': type,
     'quantity': quantity,
     'unit_price': unitPrice,
-    'total_price': totalPrice,
     if (siteId != null) 'site_id': siteId,
     if (supplier != null) 'supplier': supplier,
     if (invoiceNumber != null) 'invoice_number': invoiceNumber,
     if (reason != null) 'reason': reason,
-    if (signatureId != null) 'signature_id': signatureId,
-    if (signedBy != null) 'signed_by': signedBy,
-    if (signedAt != null) 'signed_at': signedAt,
   };
 }

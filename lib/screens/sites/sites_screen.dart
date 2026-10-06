@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/site.dart';
@@ -11,8 +11,9 @@ import 'site_form_screen.dart';
 
 class SitesScreen extends StatefulWidget {
   final AdminApi api;
+  final Widget? drawer;
 
-  const SitesScreen({super.key, required this.api});
+  const SitesScreen({super.key, required this.api, this.drawer});
 
   @override
   State<SitesScreen> createState() => _SitesScreenState();
@@ -132,6 +133,7 @@ class _SitesScreenState extends State<SitesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('المواقع والمشاريع'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar

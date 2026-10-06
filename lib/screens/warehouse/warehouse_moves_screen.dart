@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/warehouse_move.dart';
@@ -10,8 +10,9 @@ import 'sign_transaction_screen.dart';
 
 class WarehouseMovesScreen extends StatefulWidget {
   final AdminApi api;
+  final Widget? drawer;
 
-  const WarehouseMovesScreen({super.key, required this.api});
+  const WarehouseMovesScreen({super.key, required this.api, this.drawer});
 
   @override
   State<WarehouseMovesScreen> createState() => _WarehouseMovesScreenState();
@@ -93,6 +94,7 @@ class _WarehouseMovesScreenState extends State<WarehouseMovesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('حركات الصرف والتوريد المخزني'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar

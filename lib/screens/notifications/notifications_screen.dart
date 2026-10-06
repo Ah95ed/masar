@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/notification.dart';
@@ -9,8 +9,9 @@ import '../../widgets/loading_state.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final AdminApi api;
+  final Widget? drawer;
 
-  const NotificationsScreen({super.key, required this.api});
+  const NotificationsScreen({super.key, required this.api, this.drawer});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -95,6 +96,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unreadCount = _notifications.where((n) => !n.read).length;
 
     return Scaffold(
+      drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('مركز الإشعارات والتنبيهات'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar

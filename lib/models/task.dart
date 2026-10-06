@@ -1,4 +1,4 @@
-﻿class Task {
+class Task {
   final int id;
   final int siteId;
   final String? siteName;
@@ -59,20 +59,28 @@
     }
   }
 
-  factory Task.fromJson(Map<String, dynamic> json) => Task(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    siteId: (json['site_id'] as num?)?.toInt() ?? 0,
-    siteName: json['site_name']?.toString() ?? json['site']?.toString(),
-    title: json['title']?.toString() ?? '',
-    description: json['description']?.toString(),
-    assignedTo: (json['assigned_to'] as num?)?.toInt(),
-    assignedToName: json['assigned_to_name']?.toString() ?? json['engineer_name']?.toString(),
-    isBroadcast: json['is_broadcast'] == true || json['is_broadcast'] == 1 || json['is_broadcast'] == '1',
-    priority: json['priority']?.toString().toLowerCase() ?? 'medium',
-    status: json['status']?.toString().toLowerCase() ?? 'pending',
-    progress: (json['progress'] as num?)?.toInt() ?? 0,
-    createdAt: json['created_at']?.toString(),
-  );
+  factory Task.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v, [int fallback = 0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? fallback;
+    }
+
+    return Task(
+      id: parseInt(json['id']),
+      siteId: parseInt(json['site_id']),
+      siteName: json['site_name']?.toString() ?? json['site']?.toString(),
+      title: json['title']?.toString() ?? '',
+      description: json['description']?.toString(),
+      assignedTo: json['assigned_to'] != null ? parseInt(json['assigned_to']) : null,
+      assignedToName: json['assigned_to_name']?.toString() ?? json['engineer_name']?.toString(),
+      isBroadcast: json['is_broadcast'] == true || json['is_broadcast'] == 1 || json['is_broadcast'] == '1',
+      priority: json['priority']?.toString().toLowerCase() ?? 'medium',
+      status: json['status']?.toString().toLowerCase() ?? 'pending',
+      progress: parseInt(json['progress'], 0),
+      createdAt: json['created_at']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
