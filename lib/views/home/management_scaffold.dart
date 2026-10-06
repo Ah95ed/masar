@@ -6,8 +6,7 @@ import '../../core/theme/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/management_provider.dart';
 import '../dashboard/dashboard_screen.dart';
-import '../financial/financial_screen.dart';
-import '../fleet_repairs/fleet_repairs_screen.dart';
+import '../engineer_updates/engineer_updates_screen.dart';
 import '../notifications/notifications_screen.dart';
 import '../reports_review/reports_review_screen.dart';
 import '../sites/sites_screen.dart';
@@ -15,7 +14,7 @@ import '../users/users_screen.dart';
 import '../warehouse/warehouse_screen.dart';
 import '../work_plans/work_plans_screen.dart';
 
-/// الهيكل التنفيذي المتكامل لتطبيق المدير العام المطابق للوحة تحكم Just_admin
+/// الهيكل التنفيذي الرئيسي لتطبيق Maxlond Management المطابق للأقسام المعتمدة
 class ManagementScaffold extends StatefulWidget {
   const ManagementScaffold({super.key});
 
@@ -81,28 +80,27 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
     final mgmt = context.watch<ManagementProvider>();
     final unreadCount = mgmt.unreadNotificationsCount;
 
-    // الصفحات التنفيذية الثمانية
+    // الأقسام المعتمدة في النظام المطابقة للصورة المرفقة
     final List<Widget> pages = [
       DashboardScreen(onNavigateTab: _onTabSelected),
       const SitesScreen(),
       const WorkPlansScreen(),
       const ReportsReviewScreen(),
-      const FleetRepairsScreen(),
       const WarehouseScreen(),
-      const FinancialScreen(),
+      const EngineerUpdatesScreen(),
       const UsersScreen(),
+      const NotificationsScreen(),
     ];
 
-    // أسماء الأقسام المختصرة والمطابقة لـ Just_admin
     final List<String> pageTitles = [
       'لوحة التحكم',
       'المواقع',
       'خطط العمل',
-      'التقارير',
-      'الآليات',
-      'المخزن',
-      'الحسابات',
+      'التقارير اليومية',
+      'توقيع حركات المخزن',
+      'تحديثات المهندسين',
       'المستخدمون',
+      'الإشعارات',
     ];
 
     final isWideScreen = MediaQuery.of(context).size.width >= 840;
@@ -110,7 +108,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
     return Scaffold(
       backgroundColor: AppTheme.paper,
       appBar: AppBar(
-        backgroundColor: AppTheme.ink,
+        backgroundColor: const Color(0xFF0F273D),
         elevation: 0,
         leading: isWideScreen
             ? null
@@ -127,13 +125,13 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
             Container(
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: AppTheme.cyan.withOpacity(0.2),
+                color: const Color(0xFF00A2A5).withValues(alpha: 0.2),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.admin_panel_settings_rounded,
                 size: 20,
-                color: Color(0xFF38BDF8),
+                color: Color(0xFF00A2A5),
               ),
             ),
             const SizedBox(width: 8),
@@ -157,7 +155,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                     pageTitles[_currentIndex],
                     style: const TextStyle(
                       fontSize: 11,
-                      color: Color(0xFF94A3B8),
+                      color: Color(0xFF88A6BD),
                     ),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -177,37 +175,27 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                   color: Colors.white,
                 ),
                 tooltip: 'الإشعارات',
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const NotificationsScreen(),
-                    ),
-                  );
-                },
+                onPressed: () => _onTabSelected(7),
               ),
               if (unreadCount > 0)
                 Positioned(
                   top: 8,
-                  left: 8,
+                  right: 8,
                   child: Container(
-                    padding: const EdgeInsets.all(4),
+                    padding: const EdgeInsets.all(3),
                     decoration: const BoxDecoration(
-                      color: AppTheme.red,
+                      color: AppTheme.dangerColor,
                       shape: BoxShape.circle,
                     ),
-                    constraints: const BoxConstraints(
-                      minWidth: 16,
-                      minHeight: 16,
-                    ),
+                    constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
                     child: Text(
-                      '$unreadCount',
-                      textAlign: TextAlign.center,
+                      unreadCount > 99 ? '99+' : '$unreadCount',
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
+                      textAlign: TextAlign.center,
                     ),
                   ),
                 ),
@@ -225,19 +213,15 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
         children: [
           if (auth.isDemoMode)
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              color: AppTheme.cyanPale,
+              color: const Color(0xFFFEF3C7),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: Row(
                 children: [
-                  const Icon(
-                    Icons.science_rounded,
-                    size: 18,
-                    color: AppTheme.cyan,
-                  ),
+                  const Icon(Icons.info_outline, size: 16, color: Color(0xFFD97706)),
                   const SizedBox(width: 8),
                   const Expanded(
                     child: Text(
-                      'الوضع التجريبي نشط (محاكاة Just_admin بدون خادم)',
+                      'الوضع التجريبي نشط (محاكاة بدون خادم)',
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -248,10 +232,7 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
                   InkWell(
                     onTap: () => auth.exitDemoMode(),
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
                         color: AppTheme.ink,
                         borderRadius: BorderRadius.circular(6),
@@ -289,174 +270,321 @@ class _ManagementScaffoldState extends State<ManagementScaffold> {
       selectedIndex: _currentIndex,
       onDestinationSelected: _onTabSelected,
       labelType: NavigationRailLabelType.all,
-      backgroundColor: Colors.white,
-      indicatorColor: AppTheme.cyanPale,
+      backgroundColor: const Color(0xFF0F273D),
+      indicatorColor: const Color(0xFF0D3B52),
+      unselectedLabelTextStyle: const TextStyle(color: Color(0xFFBACEDC), fontSize: 11),
+      selectedLabelTextStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+      unselectedIconTheme: const IconThemeData(color: Color(0xFFBACEDC)),
+      selectedIconTheme: const IconThemeData(color: Color(0xFF00A2A5)),
       destinations: const [
         NavigationRailDestination(
-          icon: Icon(Icons.grid_view_outlined),
-          selectedIcon: Icon(Icons.grid_view_rounded, color: AppTheme.cyan),
+          icon: Icon(Icons.grid_view_rounded),
           label: Text('لوحة التحكم'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.location_on_outlined),
-          selectedIcon: Icon(Icons.location_on_rounded, color: AppTheme.cyan),
           label: Text('المواقع'),
         ),
         NavigationRailDestination(
           icon: Icon(Icons.assignment_outlined),
-          selectedIcon: Icon(Icons.assignment_rounded, color: AppTheme.cyan),
           label: Text('خطط العمل'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.assignment_turned_in_outlined),
-          selectedIcon: Icon(
-            Icons.assignment_turned_in_rounded,
-            color: AppTheme.cyan,
-          ),
-          label: Text('التقارير'),
+          icon: Icon(Icons.bar_chart_rounded),
+          label: Text('التقارير اليومية'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.local_shipping_outlined),
-          selectedIcon: Icon(
-            Icons.local_shipping_rounded,
-            color: AppTheme.amber,
-          ),
-          label: Text('الآليات'),
+          icon: Icon(Icons.check_rounded),
+          label: Text('توقيع المخزن'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.inventory_2_outlined),
-          selectedIcon: Icon(Icons.inventory_2_rounded, color: AppTheme.green),
-          label: Text('المخزن'),
+          icon: Icon(Icons.assignment_outlined),
+          label: Text('تحديثات المهندسين'),
         ),
         NavigationRailDestination(
-          icon: Icon(Icons.menu_book_outlined),
-          selectedIcon: Icon(Icons.menu_book_rounded, color: AppTheme.cyan),
-          label: Text('الحسابات'),
-        ),
-        NavigationRailDestination(
-          icon: Icon(Icons.group_outlined),
-          selectedIcon: Icon(Icons.group_rounded, color: AppTheme.cyan),
+          icon: Icon(Icons.people_outline_rounded),
           label: Text('المستخدمون'),
+        ),
+        NavigationRailDestination(
+          icon: Icon(Icons.notifications_none_rounded),
+          label: Text('الإشعارات'),
         ),
       ],
     );
   }
 
+  /// القائمة الجانبية (Drawer) بتطابق كامل وتام مع التصميم المرفق في الصورة
   Widget _buildDrawer(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final user = auth.currentUser;
+    final displayName = user?.displayName ?? 'Ahmed';
+    final initialLetter = displayName.isNotEmpty ? displayName.substring(0, 1).toUpperCase() : 'A';
 
     return Drawer(
+      backgroundColor: const Color(0xFF0F273D),
       child: Directionality(
         textDirection: TextDirection.rtl,
-        child: ListView(
-          padding: EdgeInsets.zero,
-          children: [
-            DrawerHeader(
-              decoration: const BoxDecoration(color: AppTheme.ink),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.1),
-                      shape: BoxShape.circle,
+        child: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 1. ترويسة Maxlond
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00A2A5),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text(
+                        'ML',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.admin_panel_settings_rounded,
-                      color: Color(0xFF38BDF8),
-                      size: 30,
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Maxlond',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 18,
+                            ),
+                          ),
+                          SizedBox(height: 2),
+                          Text(
+                            'إدارة المشاريع المدنية',
+                            style: TextStyle(
+                              color: Color(0xFF88A6BD),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    user?.displayName ?? 'المدير العام',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  const Text(
-                    'لوحة الإدارة المركزية - Just Admin',
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            _buildDrawerTile(0, 'لوحة التحكم', Icons.grid_view_rounded),
-            _buildDrawerTile(1, 'المواقع', Icons.location_on_rounded),
-            _buildDrawerTile(2, 'خطط العمل', Icons.assignment_rounded),
-            _buildDrawerTile(3, 'التقارير', Icons.assignment_turned_in_rounded),
-            _buildDrawerTile(4, 'الآليات', Icons.local_shipping_rounded),
-            _buildDrawerTile(5, 'المخزن', Icons.inventory_2_rounded),
-            _buildDrawerTile(6, 'الحسابات', Icons.menu_book_rounded),
-            _buildDrawerTile(7, 'المستخدمون', Icons.group_rounded),
-            const Divider(),
-            ListTile(
-              leading: const Icon(
-                Icons.notifications_outlined,
-                color: AppTheme.ink,
-              ),
-              title: const Text(
-                'الإشعارات',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const NotificationsScreen(),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(
-                Icons.logout_rounded,
-                color: AppTheme.dangerColor,
-              ),
-              title: const Text(
-                'تسجيل الخروج',
-                style: TextStyle(
-                  color: AppTheme.dangerColor,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
+                  ],
                 ),
               ),
-              onTap: () {
-                Navigator.pop(context);
-                _confirmLogout();
-              },
-            ),
-          ],
+
+              const Divider(color: Color(0xFF1E3A52), height: 1),
+              const SizedBox(height: 12),
+
+              // 2. بطاقة المستخدم
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                child: Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 20,
+                      backgroundColor: const Color(0xFF1E3A5F),
+                      child: Text(
+                        initialLetter,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            displayName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            'مدير النظام',
+                            style: TextStyle(
+                              color: Color(0xFF88A6BD),
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // 3. عنوان الفئة
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+                child: Text(
+                  'القائمة الرئيسية',
+                  style: TextStyle(
+                    color: Color(0xFF6B8BA4),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+
+              // 4. عناصر القائمة الثمانية
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  children: [
+                    _buildDrawerItem(0, 'لوحة التحكم', Icons.grid_view_rounded),
+                    _buildDrawerItem(1, 'المواقع', Icons.location_on_outlined),
+                    _buildDrawerItem(2, 'خطط العمل', Icons.assignment_outlined),
+                    _buildDrawerItem(3, 'التقارير اليومية', Icons.bar_chart_rounded),
+                    _buildDrawerItem(4, 'توقيع حركات المخزن', Icons.check_rounded),
+                    _buildDrawerItem(5, 'تحديثات المهندسين', Icons.assignment_outlined),
+                    _buildDrawerItem(6, 'المستخدمون', Icons.people_outline_rounded),
+                    _buildDrawerItem(7, 'الإشعارات', Icons.notifications_none_rounded),
+                  ],
+                ),
+              ),
+
+              // 5. زر تسجيل الخروج
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(10),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _confirmLogout();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF132F45),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.logout_rounded,
+                          color: Color(0xFFBACEDC),
+                          size: 20,
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'تسجيل الخروج',
+                            style: TextStyle(
+                              color: Color(0xFFBACEDC),
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // 6. تذييل الحالة والإصدار
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 14),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'متصل',
+                          style: TextStyle(
+                            color: Color(0xFF10B981),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Text(
+                      'الإصدار 2.0.0',
+                      style: TextStyle(
+                        color: Color(0xFF6B8BA4),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildDrawerTile(int index, String title, IconData icon) {
+  Widget _buildDrawerItem(int index, String title, IconData icon) {
     final isSelected = _currentIndex == index;
-    return ListTile(
-      leading: Icon(icon, color: isSelected ? AppTheme.cyan : AppTheme.muted),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? AppTheme.cyan : AppTheme.textPrimary,
-          fontSize: 13,
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(10),
+        onTap: () {
+          Navigator.pop(context);
+          _onTabSelected(index);
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+          decoration: BoxDecoration(
+            color: isSelected ? const Color(0xFF0D3B52) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: isSelected
+                ? Border.all(color: const Color(0xFF00A2A5), width: 1.5)
+                : null,
+          ),
+          child: Row(
+            children: [
+              Icon(
+                icon,
+                size: 20,
+                color: isSelected ? Colors.white : const Color(0xFFBACEDC),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : const Color(0xFFBACEDC),
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                    fontSize: 13.5,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      selected: isSelected,
-      selectedTileColor: AppTheme.cyanPale,
-      onTap: () {
-        Navigator.pop(context);
-        _onTabSelected(index);
-      },
     );
   }
 }

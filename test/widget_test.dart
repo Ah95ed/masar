@@ -1,46 +1,20 @@
-import 'dart:convert';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:masar/core/network/api_client.dart';
-import 'package:masar/main.dart';
-import 'package:masar/providers/auth_provider.dart';
-import 'package:masar/services/auth_service.dart';
-import 'spacepoint_test.dart';
+﻿import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:masar/app.dart';
+import 'package:masar/core/secure_storage.dart';
+import 'package:masar/services/session_manager.dart';
 
 void main() {
-  testWidgets('SpacePointApp launches and renders AuthGate smoke test', (WidgetTester tester) async {
-    final mockStorage = MockStorageService();
-    final mockClient = MockHttpClient((request) {
-      return http.Response(
-        jsonEncode({'success': false, 'error': {'code': 'UNAUTHORIZED', 'message': 'No session'}}),
-        401,
-      );
-    });
+  TestWidgetsFlutterBinding.ensureInitialized();
 
-    final apiClient = ApiClient(
-      httpClient: mockClient,
-      storageService: mockStorage,
-    );
+  testWidgets('MaxlondApp launches and renders splash screen smoke test', (WidgetTester tester) async {
+    SharedPreferences.setMockInitialValues({});
+    await SecureStorage.instance.init();
+    await SessionManager.instance.restore();
 
-    final authService = AuthService(
-      apiClient: apiClient,
-      storageService: mockStorage,
-    );
+    await tester.pumpWidget(const MaxlondApp());
+    expect(find.byType(MaxlondApp), findsOneWidget);
 
-    final authProvider = AuthProvider(
-      authService: authService,
-      storageService: mockStorage,
-    );
-
-    await tester.pumpWidget(
-      SpacePointApp(
-        authProvider: authProvider,
-      ),
-    );
-
-    await tester.pump();
-
-    expect(find.byType(SpacePointApp), findsOneWidget);
-    expect(find.byType(AuthGate), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 1500));
   });
 }

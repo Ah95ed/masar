@@ -3,11 +3,11 @@ name: Masar CI/CD
 on:
   push:
     tags:
-      - "v*" # يشتغل عند رفع تاغ مثل v1.0.0
+      - "v*" # يشتغل عند رفع تاج مثل v1.0.0
 
 jobs:
   build_android:
-    name: Android APK Build
+    name: Android APK Build (Split per ABI)
     runs-on: ubuntu-latest
 
     steps:
@@ -42,14 +42,14 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build APK
-        run: flutter build apk --release --obfuscate --split-debug-info=build/symbols/android
+      - name: Build Split APKs
+        run: flutter build apk --release --split-per-abi --obfuscate --split-debug-info=build/symbols/android
 
-      - name: Upload APK Artifact
+      - name: Upload APK Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-*-release.apk
 
   build_windows:
     name: Windows Build
@@ -95,7 +95,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Download Android APK
+      - name: Download Android APKs
         uses: actions/download-artifact@v4
         with:
           name: release-apk
@@ -111,15 +111,15 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            release-assets/app-release.apk
+            release-assets/app-*-release.apk
             release-assets/masar-windows.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-# أوامر مساعدة لرفع التاغ:
+# أوامر مساعدة لرفع التاج:
 # git add .github/workflows/Android.yaml
-# git commit -m "ci: publish both android apk and windows zip on tag release"
+# git commit -m "ci: publish split abis android apk and windows zip on tag release"
 # git push origin main
 # git tag -d v1.0.0
 # git push origin :refs/tags/v1.0.0

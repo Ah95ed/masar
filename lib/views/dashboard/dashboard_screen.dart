@@ -425,7 +425,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icons.group_rounded, // users in Just_admin
                 accentColor: AppTheme.green,
                 tintColor: AppTheme.greenPale,
-                onTap: () => widget.onNavigateTab?.call(7),
+                onTap: () => widget.onNavigateTab?.call(6),
               ),
             ),
           ],
@@ -466,7 +466,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           icon: Icons.inventory_2_rounded, // box in Just_admin
           accentColor: AppTheme.green,
           tintColor: AppTheme.greenPale,
-          onTap: () => widget.onNavigateTab?.call(5),
+          onTap: () => widget.onNavigateTab?.call(4),
         ),
       ],
     );
@@ -730,10 +730,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(width: 8),
             Expanded(
               child: _buildShortcutButton(
-                label: 'المالية والقيود',
-                icon: Icons.menu_book_rounded, // book
-                color: AppTheme.green,
-                onTap: () => widget.onNavigateTab?.call(6),
+                label: 'تحديثات المهندسين',
+                icon: Icons.assignment_outlined,
+                color: AppTheme.cyan,
+                onTap: () => widget.onNavigateTab?.call(5),
               ),
             ),
           ],
