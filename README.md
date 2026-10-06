@@ -76,16 +76,19 @@ lib/
 ## 🚀 تعليمات التشغيل (Running Instructions)
 
 1. **تثبيت الحزم والاعتماديات:**
+
    ```bash
    flutter pub get
    ```
 
 2. **تشغيل الاختبارات التلقائية:**
+
    ```bash
    flutter test
    ```
 
 3. **التحقق من الكود والجودة:**
+
    ```bash
    flutter analyze
    ```

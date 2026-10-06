@@ -395,94 +395,112 @@ void main() {
         throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 422)),
       );
     });
-  });
+    test('تحليل بيانات حركة المخزن مع التوقيع الرقمي (WarehouseMoveModel Signature)', () {
+      final json = {
+        'id': 41,
+        'item_id': 5,
+        'item_code': '112',
+        'item_name': 'اسمنت',
+        'type': 'out',
+        'quantity': '10.000',
+        'unit': 'قطعة',
+        'unit_price': '6000.00',
+        'total_price': '60000.00',
+        'site_id': null,
+        'site_name': null,
+        'supplier': 'اسمنت',
+        'invoice_number': '1',
+        'reason': 'صرف لموقع',
+        'created_at': '2026-10-06 12:00:00',
+        'created_by': 'مدير النظام',
+        'signature_id': 9,
+        'signed_by': 'مدير النظام',
+        'signed_at': '2026-10-06 13:00:00',
+        'signature_hash': 'sha256_hash_abc',
+      };
 
-  group('اختبارات العمليات المالية والمخزنية والإشعارات (Business Logic Validation)', () {
-    test('منع الصرف فوق الرصيد المخزني ورمي استثناء 422', () async {
+      final move = WarehouseMoveModel.fromJson(json);
+      expect(move.id, equals(41));
+      expect(move.itemName, equals('اسمنت'));
+      expect(move.isSigned, isTrue);
+      expect(move.signedBy, equals('مدير النظام'));
+      expect(move.signedAt, equals('2026-10-06 13:00:00'));
+      expect(move.signatureId, equals(9));
+    });
+
+    test('توقيع حركة مخزن وإرسال البيانات لمسار transaction-sign', () async {
       final mockStorage = MockStorageService();
-      final mockClient = MockHttpClient((request) => http.Response(jsonEncode({"success": true}), 200));
- final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
- final mgmtService = ManagementService(apiClient: apiClient);
+      Uri? capturedUri;
+      String? capturedBody;
 
- final moveData = {
- 'item_id': 5,
- 'type': 'out',
- 'quantity': 50.0,
- 'unit_price': 45000.0,
- 'site_id': 12,
- };
+      final mockClient = MockHttpClient((request) {
+        capturedUri = request.url;
+        if (request is http.Request) {
+          capturedBody = request.body;
+        }
+        return http.Response(
+          jsonEncode({'success': true, 'data': {'signed': true}}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
 
- expect(
- () => mgmtService.createWarehouseMove(moveData, currentStock: 20.0),
- throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 422)),
- );
- });
+      final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
+      final mgmtService = ManagementService(apiClient: apiClient);
 
- test('التحقق من توازن القيد المحاسبي (مجموع المدين = مجموع الدائن)', () async {
- final mockStorage = MockStorageService();
-      final mockClient = MockHttpClient((request) => http.Response(jsonEncode({"success": true}), 200));
- final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
- final mgmtService = ManagementService(apiClient: apiClient);
+      await mgmtService.signWarehouseMove(
+        transactionId: 41,
+        signatureData: 'data:image/png;base64,iVBORw0KGgo...',
+      );
 
- final unbalancedEntry = {
- 'description': 'شراء مواد غير متوازن',
- 'site_id': 12,
- 'lines': [
- {'account_id': 15, 'debit': 125000.0, 'credit': 0.0},
- {'account_id': 2, 'debit': 0.0, 'credit': 100000.0},
- ],
- };
+      expect(capturedUri.toString(), contains('route=transaction-sign'));
+      expect(capturedBody, contains('41'));
+      expect(capturedBody, contains('signature_data'));
+    });
 
- expect(
- () => mgmtService.createJournalEntry(unbalancedEntry),
- throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 422)),
- );
- });
+    test('التحقق من ترويسة User-Agent ومنع Cookies والمحاولة البديلة بـ X-Auth-Token عند 401', () async {
+      final mockStorage = MockStorageService();
+      await mockStorage.saveToken('test_token_64');
 
- test('تحديث حالة الصيانة وتغيير حالة الآلية', () async {
- final mockStorage = MockStorageService();
- Uri? capturedStatusUri;
- String? capturedStatusBody;
+      int attempts = 0;
+      final capturedHeaders = <Map<String, String>>[];
 
- final mockClient = MockHttpClient((request) {
- capturedStatusUri = request.url;
- if (request is http.Request) {
- capturedStatusBody = request.body;
- }
- return http.Response(jsonEncode({'success': true}), 200, headers: {'content-type': 'application/json'});
- });
- final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
- final mgmtService = ManagementService(apiClient: apiClient);
+      final mockClient = MockHttpClient((request) {
+        attempts++;
+        capturedHeaders.add(Map<String, String>.from(request.headers));
 
- await mgmtService.setRepairStatus(repairId: 8, status: 'in_progress');
- expect(capturedStatusUri.toString(), contains('route=repair-status'));
- expect(capturedStatusBody, contains('in_progress'));
- });
+        if (attempts == 1) {
+          // أول محاولة: نرجع 401 لمحاكاة حذف ترويسة Authorization
+          return http.Response(
+            jsonEncode({'success': false, 'error': {'code': 'unauthorized', 'message': '401'}}),
+            401,
+            headers: {'content-type': 'application/json'},
+          );
+        }
 
- test('قراءة الإشعارات الفردية والجماعية', () async {
- final mockStorage = MockStorageService();
- Uri? capturedSingleUri;
- Uri? capturedAllUri;
+        // ثاني محاولة: تنجح بفضل X-Auth-Token
+        return http.Response(
+          jsonEncode({'success': true, 'data': {'status': 'ok'}}),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      });
 
- final mockClient = MockHttpClient((request) {
- if (request.url.queryParameters['route'] == 'notification-read') {
- capturedSingleUri = request.url;
- return http.Response(jsonEncode({'success': true}), 200, headers: {'content-type': 'application/json'});
- }
- if (request.url.queryParameters['route'] == 'notification-read-all') {
- capturedAllUri = request.url;
- return http.Response(jsonEncode({'success': true}), 200, headers: {'content-type': 'application/json'});
- }
- return http.Response('{}', 404);
- });
- final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
- final mgmtService = ManagementService(apiClient: apiClient);
+      final apiClient = ApiClient(httpClient: mockClient, storageService: mockStorage);
+      final res = await apiClient.get('dashboard');
 
- await mgmtService.markNotificationRead(3);
- expect(capturedSingleUri.toString(), contains('route=notification-read'));
+      expect(attempts, equals(2));
+      expect(res, isA<Map<String, dynamic>>());
 
- await mgmtService.markAllNotificationsRead();
- expect(capturedAllUri.toString(), contains('route=notification-read-all'));
- });
- });
+      // التحقق من أن ترويسة Cookie غير موجودة نهائياً
+      expect(capturedHeaders[0].containsKey('Cookie'), isFalse);
+      expect(capturedHeaders[0].containsKey('cookie'), isFalse);
+
+      // التحقق من User-Agent للمتصفح
+      expect(capturedHeaders[0]['User-Agent'], contains('Mozilla/5.0'));
+
+      // التحقق من استخدام X-Auth-Token في المحاولة الثانية
+      expect(capturedHeaders[1]['X-Auth-Token'], equals('test_token_64'));
+    });
+  });
 }

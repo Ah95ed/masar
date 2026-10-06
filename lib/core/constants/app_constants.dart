@@ -7,19 +7,16 @@ class AppConstants {
   static const String appArabicName = 'إدارة مسار - Maxlond';
   static const String appSubtitle = 'منظومة الإدارة العليا والرقابة الميدانية والمشاريع';
 
-  // النطاق الافتراضي
-  // النطاق الأساسي الرسمي للنظام
-  static const String defaultDomain = 'https://aksat.shop';
+  // النطاق الافتراضي الرسمي للخادم
+  static const String defaultDomain = 'https://vehiclegate.ghusun.net';
 
   // روابط الـ API الأساسية المعتمدة رسمياً
-  // مصادقة المستخدمين: https://aksat.shop/api/auth.php?route=
-  // عمليات المدير: https://aksat.shop/api/management.php?route=
-  static const String authBaseUrl = 'https://aksat.shop/api/auth.php?route=';
-  static const String managementBaseUrl = 'https://aksat.shop/api/management.php?route=';
+  // مصادقة المستخدمين: https://vehiclegate.ghusun.net/api/auth.php?route=
+  // عمليات المدير: https://vehiclegate.ghusun.net/api/management.php?route=
+  static const String authBaseUrl = 'https://vehiclegate.ghusun.net/api/auth.php?route=';
+  static const String managementBaseUrl = 'https://vehiclegate.ghusun.net/api/management.php?route=';
 
-  // مسارات Base URLs
-  // https://DOMAIN/api/auth.php?route=
-  // https://DOMAIN/api/management.php?route=
+  // مسارات Base URLs ديناميكية
   static String buildAuthUrl(String domain) {
     final clean = domain.trim().replaceAll(RegExp(r'/+$'), '');
     return '$clean/api/auth.php?route=';
@@ -31,14 +28,19 @@ class AppConstants {
   }
 
   // مفاتيح التخزين الآمن
-  static const String keyToken = 'maxlond_admin_token';
+  static const String keyToken = 'access_token';
   static const String keyDomain = 'maxlond_domain';
   static const String keyUsername = 'maxlond_saved_username';
 
   // تعريف الجهاز لطلب الدخول
-  static const String deviceInfo = 'Maxlond Management';
+  static const String deviceInfo = 'Maxlond Management / Flutter';
   static const String defaultDeviceInfo = deviceInfo;
   static const String defaultBaseUrl = defaultDomain;
+
+  // متصفح User-Agent يحاكي متصفحاً حقيقياً لتجاوز حجب WAF
+  static const String userAgent =
+      'Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 '
+      '(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36';
 
   // الدور المطلوب حصراً
   static const String requiredRole = 'admin';
@@ -63,7 +65,7 @@ class AppConstants {
   static const String routeWorkPlanCancel = 'work-plan-cancel';
   static const String routeWorkPlanDelete = 'work-plan-delete';
 
-  // التقارير والمراجعة
+  // التقارير اليومية
   static const String routeReports = 'reports';
   static const String routeReportReview = 'report-review';
   static const String routeReportUpdate = 'report-update';
@@ -87,6 +89,7 @@ class AppConstants {
   static const String routeWarehouseCategorySave = 'warehouse-category-save';
   static const String routeWarehouseItemStatus = 'warehouse-item-status';
   static const String routeWarehouseMoveCreate = 'warehouse-move-create';
+  static const String routeTransactionSign = 'transaction-sign';
 
   // الصيانة
   static const String routeRepairs = 'repairs';
@@ -94,7 +97,7 @@ class AppConstants {
   static const String routeRepairUpdate = 'repair-update';
   static const String routeRepairStatus = 'repair-status';
 
-  // المالية والحسابات
+  // العمليات المالية
   static const String routeAccounts = 'accounts';
   static const String routeAccountSave = 'account-save';
   static const String routeAccountDelete = 'account-delete';
@@ -108,11 +111,12 @@ class AppConstants {
   static const String routeNotificationRead = 'notification-read';
   static const String routeNotificationReadAll = 'notification-read-all';
 
-  // أدوار المستخدمين المتاحة للإنشاء من قبل الإدارة
+  // أدوار المستخدمين المتاح إنشاؤهم من قبل المدير
   static const List<String> creatableRoles = [
     'engineer',
     'accountant',
-    'admin',
+    'warehouse',
+    'fleet_manager',
   ];
 
   // أولويات العمل

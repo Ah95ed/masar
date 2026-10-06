@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:convert';
+import 'dart:ui' as ui;
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/arabic_helpers.dart';
@@ -960,6 +962,350 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
     );
   }
 
+  void _showSignatureDialog(WarehouseMoveModel move) {
+    final List<List<Offset>> strokes = [];
+    bool isSubmitting = false;
+    String? localError;
+
+    showDialog(
+      context: context,
+      barrierDismissible: !isSubmitting,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => Directionality(
+          textDirection: TextDirection.rtl,
+          child: AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: move.isSigned ? AppTheme.greenPale : AppTheme.amberPale,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    move.isSigned ? Icons.verified_user_rounded : Icons.draw_rounded,
+                    color: move.isSigned ? AppTheme.green : AppTheme.amber,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        move.isSigned ? 'تفاصيل الحركة المعتمدة' : 'توقيع واعتماد حركة المخزن',
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.ink),
+                      ),
+                      Text(
+                        'حركة رقم #${move.id} - ${move.moveTypeLabel}',
+                        style: const TextStyle(fontSize: 12, color: AppTheme.muted),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            content: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 480),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // بطاقة تفاصيل الحركة
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppTheme.line),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                move.itemName ?? 'مادة مخزنية',
+                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.ink),
+                              ),
+                              Text(
+                                '${move.quantity} ${move.unit ?? ""}',
+                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: AppTheme.ink),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 12),
+                          if (move.siteName != null)
+                            Text('الموقع: ${move.siteName}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                          if (move.supplier != null)
+                            Text('المورد: ${move.supplier}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                          if (move.invoiceNumber != null)
+                            Text('رقم الفاتورة: ${move.invoiceNumber}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                          if (move.totalPrice > 0)
+                            Text('الإجمالي: ${ArabicHelpers.formatCurrency(move.totalPrice)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.green)),
+                          if (move.notes != null && move.notes!.isNotEmpty)
+                            Text('ملاحظات/السبب: ${move.notes}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 14),
+
+                    // حالة التوقيع
+                    if (move.isSigned) ...[
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppTheme.greenPale,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.green.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.check_circle_rounded, color: AppTheme.green, size: 28),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'تم توقيع واعتماد هذه الحركة رسمياً',
+                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: AppTheme.green),
+                                  ),
+                                  if (move.signedBy != null)
+                                    Text('الموقّع: ${move.signedBy}', style: const TextStyle(fontSize: 11, color: AppTheme.ink)),
+                                  if (move.signedAt != null)
+                                    Text('التاريخ: ${move.signedAt}', style: const TextStyle(fontSize: 10.5, color: AppTheme.muted)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      const Text(
+                        'التوقيع الرقمي للمدير العام (ارسم باللمس أو الماوس):',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.ink),
+                      ),
+                      const SizedBox(height: 8),
+
+                      // لوحة الرسم Canvas
+                      Container(
+                        height: 160,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: AppTheme.ink.withOpacity(0.3), width: 1.5),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: GestureDetector(
+                            onPanStart: isSubmitting
+                                ? null
+                                : (details) {
+                                    setDialogState(() {
+                                      strokes.add([details.localPosition]);
+                                      localError = null;
+                                    });
+                                  },
+                            onPanUpdate: isSubmitting
+                                ? null
+                                : (details) {
+                                    setDialogState(() {
+                                      if (strokes.isNotEmpty) {
+                                        strokes.last.add(details.localPosition);
+                                      }
+                                    });
+                                  },
+                            child: Stack(
+                              children: [
+                                CustomPaint(
+                                  size: const Size(double.infinity, 160),
+                                  painter: _SignaturePainter(strokes: strokes),
+                                ),
+                                if (strokes.isEmpty)
+                                  const Center(
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.gesture_rounded, color: AppTheme.muted, size: 32),
+                                        SizedBox(height: 6),
+                                        Text(
+                                          'انقر واسحب لرسم التوقيع هنا',
+                                          style: TextStyle(fontSize: 11, color: AppTheme.muted),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      if (localError != null) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          localError!,
+                          style: const TextStyle(fontSize: 11, color: Colors.red, fontWeight: FontWeight.bold),
+                        ),
+                      ],
+
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton.icon(
+                            onPressed: (strokes.isEmpty || isSubmitting)
+                                ? null
+                                : () {
+                                    setDialogState(() {
+                                      strokes.clear();
+                                      localError = null;
+                                    });
+                                  },
+                            icon: const Icon(Icons.clear_rounded, size: 16),
+                            label: const Text('مسح التوقيع', style: TextStyle(fontSize: 12)),
+                            style: TextButton.styleFrom(foregroundColor: AppTheme.muted),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: isSubmitting ? null : () => Navigator.pop(ctx),
+                child: Text(move.isSigned ? 'إغلاق' : 'إلغاء'),
+              ),
+              if (!move.isSigned)
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.ink,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  icon: isSubmitting
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.check_rounded, size: 18),
+                  label: Text(isSubmitting ? 'جاري الاعتماد...' : 'اعتماد وحفظ التوقيع'),
+                  onPressed: isSubmitting
+                      ? null
+                      : () async {
+                          if (strokes.isEmpty) {
+                            setDialogState(() {
+                              localError = 'يرجى رسم التوقيع قبل المتابعة.';
+                            });
+                            return;
+                          }
+
+                          final prov = context.read<ManagementProvider>();
+                          final scaffoldMessenger = ScaffoldMessenger.of(context);
+                          final navigator = Navigator.of(ctx);
+
+                          setDialogState(() {
+                            isSubmitting = true;
+                            localError = null;
+                          });
+
+                          try {
+                            const width = 400.0;
+                            const height = 160.0;
+                            final recorder = ui.PictureRecorder();
+                            final canvas = Canvas(recorder, const Rect.fromLTWH(0, 0, width, height));
+
+                            // خلفية بيضاء
+                            canvas.drawRect(
+                              const Rect.fromLTWH(0, 0, width, height),
+                              Paint()..color = Colors.white,
+                            );
+
+                            final strokePaint = Paint()
+                              ..color = const Color(0xFF0F172A)
+                              ..strokeCap = StrokeCap.round
+                              ..strokeJoin = StrokeJoin.round
+                              ..strokeWidth = 3.0
+                              ..style = PaintingStyle.stroke;
+
+                            for (final stroke in strokes) {
+                              if (stroke.length > 1) {
+                                final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
+                                for (int i = 1; i < stroke.length; i++) {
+                                  path.lineTo(stroke[i].dx, stroke[i].dy);
+                                }
+                                canvas.drawPath(path, strokePaint);
+                              } else if (stroke.length == 1) {
+                                canvas.drawCircle(stroke.first, 1.5, Paint()..color = const Color(0xFF0F172A));
+                              }
+                            }
+
+                            final picture = recorder.endRecording();
+                            final img = await picture.toImage(width.toInt(), height.toInt());
+                            final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+
+                            if (byteData == null) {
+                              throw Exception('تعذر استخراج بيانات صورة التوقيع');
+                            }
+
+                            final bytes = byteData.buffer.asUint8List();
+
+                            // التحقق من حد الحجم الأقصى (250KB)
+                            if (bytes.length > 250 * 1024) {
+                              setDialogState(() {
+                                isSubmitting = false;
+                                localError = 'حجم التوقيع يتجاوز الحد المسموح (250KB). يرجى رسم توقيع أبسط.';
+                              });
+                              return;
+                            }
+
+                            final dataUrl = 'data:image/png;base64,${base64Encode(bytes)}';
+
+                            final success = await prov.signWarehouseMove(
+                              transactionId: move.id,
+                              signatureData: dataUrl,
+                            );
+
+                            if (!ctx.mounted) return;
+
+                            if (success) {
+                              navigator.pop();
+                              scaffoldMessenger.showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم اعتماد وتوقيع حركة المخزن بنجاح'),
+                                  backgroundColor: AppTheme.green,
+                                ),
+                              );
+                            } else {
+                              setDialogState(() {
+                                isSubmitting = false;
+                                localError = prov.warehouseError ?? 'تعذر حفظ التوقيع، يرجى المحاولة لاحقاً.';
+                              });
+                            }
+                          } catch (e) {
+                            setDialogState(() {
+                              isSubmitting = false;
+                              localError = 'حدث خطأ أثناء معالجة التوقيع: $e';
+                            });
+                          }
+                        },
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMovesTab() {
     final prov = context.watch<ManagementProvider>();
     final moves = prov.warehouseMoves;
@@ -984,60 +1330,89 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
         Color badgeColor = isIn ? AppTheme.green : (isAdjust ? AppTheme.cyan : AppTheme.amber);
         Color badgeBg = isIn ? AppTheme.greenPale : (isAdjust ? AppTheme.cyanPale : AppTheme.amberPale);
 
-        return Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: AppTheme.line),
-          ),
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(6)),
-                    child: Text(m.moveTypeLabel, style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.bold)),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(m.itemName ?? 'مادة مخزنية', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  ),
-                  Text(
-                    '${m.quantity}',
-                    style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: badgeColor),
-                  ),
+        return InkWell(
+          borderRadius: BorderRadius.circular(10),
+          onTap: () => _showSignatureDialog(m),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppTheme.line),
+            ),
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: badgeBg, borderRadius: BorderRadius.circular(6)),
+                      child: Text(m.moveTypeLabel, style: TextStyle(color: badgeColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(m.itemName ?? 'مادة مخزنية', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                    ),
+                    Text(
+                      '${m.quantity}',
+                      style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: badgeColor),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (m.siteName != null)
+                      Text('الموقع: ${m.siteName}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                    if (m.supplier != null)
+                      Text('المورد: ${m.supplier}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                    if (m.invoiceNumber != null)
+                      Text('فاتورة: ${m.invoiceNumber}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                    if (m.totalPrice > 0)
+                      Text('القيمة: ${ArabicHelpers.formatCurrency(m.totalPrice)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.ink)),
+                  ],
+                ),
+                if (m.notes != null && m.notes!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('السبب: ${m.notes}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
                 ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  if (m.siteName != null)
-                    Text('الموقع: ${m.siteName}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
-                  if (m.supplier != null)
-                    Text('المورد: ${m.supplier}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
-                  if (m.invoiceNumber != null)
-                    Text('فاتورة: ${m.invoiceNumber}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
-                  if (m.totalPrice > 0)
-                    Text('القيمة: ${ArabicHelpers.formatCurrency(m.totalPrice)}', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.ink)),
-                ],
-              ),
-              if (m.notes != null && m.notes!.isNotEmpty) ...[
-                const SizedBox(height: 4),
-                Text('السبب: ${m.notes}', style: const TextStyle(fontSize: 11, color: AppTheme.muted)),
+                const Divider(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(m.createdAt ?? '', style: const TextStyle(fontSize: 10.5, color: AppTheme.muted)),
+                    if (m.isSigned)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                        decoration: BoxDecoration(color: AppTheme.greenPale, borderRadius: BorderRadius.circular(6)),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.verified_rounded, size: 12, color: AppTheme.green),
+                            SizedBox(width: 4),
+                            Text('موقّع ومعتمد', style: TextStyle(color: AppTheme.green, fontSize: 10.5, fontWeight: FontWeight.bold)),
+                          ],
+                        ),
+                      )
+                    else
+                      OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.amber,
+                          side: const BorderSide(color: AppTheme.amber),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        icon: const Icon(Icons.draw_rounded, size: 13),
+                        label: const Text('توقيع الحركة', style: TextStyle(fontSize: 10.5)),
+                        onPressed: () => _showSignatureDialog(m),
+                      ),
+                  ],
+                ),
               ],
-              const Divider(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(m.createdAt ?? '', style: const TextStyle(fontSize: 10.5, color: AppTheme.muted)),
-                  Text('المسؤول: ${m.createdBy ?? "الإدارة"}', style: const TextStyle(fontSize: 10.5, color: AppTheme.muted)),
-                ],
-              ),
-            ],
+            ),
           ),
         );
       },
@@ -1085,3 +1460,34 @@ class _WarehouseScreenState extends State<WarehouseScreen> with SingleTickerProv
 
 
 
+
+/// فئة رسم خطوط التوقيع على الـ Canvas
+class _SignaturePainter extends CustomPainter {
+  final List<List<Offset>> strokes;
+  _SignaturePainter({required this.strokes});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF0F172A)
+      ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
+      ..strokeWidth = 3.0
+      ..style = PaintingStyle.stroke;
+
+    for (final stroke in strokes) {
+      if (stroke.length > 1) {
+        final path = Path()..moveTo(stroke.first.dx, stroke.first.dy);
+        for (int i = 1; i < stroke.length; i++) {
+          path.lineTo(stroke[i].dx, stroke[i].dy);
+        }
+        canvas.drawPath(path, paint);
+      } else if (stroke.length == 1) {
+        canvas.drawCircle(stroke.first, 1.5, Paint()..color = const Color(0xFF0F172A));
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _SignaturePainter oldDelegate) => true;
+}

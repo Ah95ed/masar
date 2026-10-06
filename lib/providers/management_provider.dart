@@ -568,6 +568,29 @@ class ManagementProvider extends ChangeNotifier {
     }
   }
 
+  /// توقيع حركة مخزنية رقمياً
+  Future<bool> signWarehouseMove({
+    required int transactionId,
+    required String signatureData,
+  }) async {
+    try {
+      await _service.signWarehouseMove(
+        transactionId: transactionId,
+        signatureData: signatureData,
+      );
+      await fetchWarehouseData();
+      return true;
+    } on ApiException catch (e) {
+      warehouseError = e.message;
+      notifyListeners();
+      return false;
+    } catch (e) {
+      warehouseError = 'فشل توقيع الحركة المخزنية: ';
+      notifyListeners();
+      return false;
+    }
+  }
+
   // ==================== الحسابات والمالية ====================
   LoadingState financialState = LoadingState.initial;
   List<AccountModel> accounts = [];

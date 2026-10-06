@@ -265,6 +265,20 @@ class ManagementService {
     await apiClient.post(AppConstants.routeWarehouseMoveCreate, body: moveData);
   }
 
+  /// توقيع حركة مخزنية رقمياً وحفظ التوقيع
+  Future<void> signWarehouseMove({
+    required int transactionId,
+    required String signatureData,
+  }) async {
+    await apiClient.post(
+      AppConstants.routeTransactionSign,
+      body: {
+        'transaction_id': transactionId,
+        'signature_data': signatureData,
+      },
+    );
+  }
+
   // ==================== الصيانة والإصلاح ====================
   Future<List<RepairModel>> getRepairs() async {
     final response = await apiClient.get(AppConstants.routeRepairs);

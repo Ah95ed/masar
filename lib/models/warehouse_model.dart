@@ -97,11 +97,13 @@ class WarehouseItemModel {
   }
 }
 
-/// نموذج حركة مخزنية مطابق لـ warehouse_moves.php و warehouse_transactions
+/// نموذج حركة مخزنية مطابق لـ warehouse_moves.php و warehouse_transactions مع دعم التوقيع الرقمي
 class WarehouseMoveModel {
   final int id;
   final int itemId;
+  final String? itemCode;
   final String? itemName;
+  final String? unit;
   final String moveType; // in (وارد), out (صادر), adjust (تعديل رصيد)
   final double quantity;
   final double unitPrice;
@@ -113,11 +115,17 @@ class WarehouseMoveModel {
   final String? notes;
   final String? createdAt;
   final String? createdBy;
+  final int? signatureId;
+  final String? signedBy;
+  final String? signedAt;
+  final String? signatureHash;
 
   WarehouseMoveModel({
     required this.id,
     required this.itemId,
+    this.itemCode,
     this.itemName,
+    this.unit,
     required this.moveType,
     required this.quantity,
     this.unitPrice = 0.0,
@@ -129,7 +137,16 @@ class WarehouseMoveModel {
     this.notes,
     this.createdAt,
     this.createdBy,
+    this.signatureId,
+    this.signedBy,
+    this.signedAt,
+    this.signatureHash,
   });
+
+  bool get isSigned =>
+      (signedBy != null && signedBy!.trim().isNotEmpty) ||
+      signatureId != null ||
+      (signatureHash != null && signatureHash!.trim().isNotEmpty);
 
   String get moveTypeLabel {
     switch (moveType.toLowerCase()) {
@@ -148,7 +165,9 @@ class WarehouseMoveModel {
     return WarehouseMoveModel(
       id: int.tryParse(json['id']?.toString() ?? '0') ?? 0,
       itemId: int.tryParse(json['item_id']?.toString() ?? '0') ?? 0,
+      itemCode: json['item_code']?.toString(),
       itemName: json['item_name']?.toString() ?? json['item']?.toString(),
+      unit: json['unit']?.toString(),
       moveType: json['type']?.toString().toLowerCase() ?? json['move_type']?.toString().toLowerCase() ?? 'out',
       quantity: double.tryParse(json['quantity']?.toString() ?? '0') ?? 0.0,
       unitPrice: double.tryParse(json['unit_price']?.toString() ?? '0') ?? 0.0,
@@ -160,6 +179,10 @@ class WarehouseMoveModel {
       notes: json['reason']?.toString() ?? json['notes']?.toString(),
       createdAt: json['created_at']?.toString(),
       createdBy: json['full_name']?.toString() ?? json['created_by']?.toString(),
+      signatureId: int.tryParse(json['signature_id']?.toString() ?? ''),
+      signedBy: json['signed_by']?.toString(),
+      signedAt: json['signed_at']?.toString(),
+      signatureHash: json['signature_hash']?.toString(),
     );
   }
 
@@ -171,11 +194,17 @@ class WarehouseMoveModel {
       'quantity': quantity,
       'unit_price': unitPrice,
       'total_price': totalPrice,
+      if (itemCode != null) 'item_code': itemCode,
+      if (unit != null) 'unit': unit,
       if (siteId != null) 'site_id': siteId,
       if (supplier != null) 'supplier': supplier,
       if (invoiceNumber != null) 'invoice_number': invoiceNumber,
       if (notes != null && notes!.isNotEmpty) 'reason': notes,
       if (notes != null && notes!.isNotEmpty) 'notes': notes,
+      if (signatureId != null) 'signature_id': signatureId,
+      if (signedBy != null) 'signed_by': signedBy,
+      if (signedAt != null) 'signed_at': signedAt,
+      if (signatureHash != null) 'signature_hash': signatureHash,
     };
   }
 }
