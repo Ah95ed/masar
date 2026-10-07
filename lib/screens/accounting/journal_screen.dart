@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import '../../widgets/auto_refresh_wrapper.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/journal_entry.dart';
@@ -56,9 +57,22 @@ class _JournalScreenState extends State<JournalScreen> {
     }
   }
 
+  Future<void> _loadSilently() async {
+    try {
+      final res = await widget.api.get('journal');
+      if (!mounted) return;
+      setState(() {
+        _entries = (res as List).map((e) => JournalEntry.fromJson(e)).toList();
+      });
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 60),
+      onRefresh: _loadSilently,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('سجل قيود اليومية العامة'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar
@@ -85,6 +99,7 @@ class _JournalScreenState extends State<JournalScreen> {
                           },
                         ),
                 ),
+      ),
     );
   }
 

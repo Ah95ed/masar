@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import '../../widgets/auto_refresh_wrapper.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../services/admin_api.dart';
@@ -55,9 +56,22 @@ class _FinancialScreenState extends State<FinancialScreen> {
     }
   }
 
+  Future<void> _loadSilently() async {
+    try {
+      final res = await widget.api.get('financial');
+      if (!mounted) return;
+      setState(() {
+        _data = res is Map<String, dynamic> ? res : Map<String, dynamic>.from(res as Map);
+      });
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 60),
+      onRefresh: _loadSilently,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('ميزان المراجعة والتقارير المالية'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar
@@ -78,6 +92,7 @@ class _FinancialScreenState extends State<FinancialScreen> {
                     ],
                   ),
                 ),
+      ),
     );
   }
 

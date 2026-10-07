@@ -61,239 +61,252 @@ class _AdminScaffoldState extends State<AdminScaffold> {
     );
   }
 
-  Widget _buildDrawer(BuildContext context) {
+  Widget _buildDrawerContent(BuildContext context, {required bool isPermanent}) {
     final user = SessionManager.instance.user;
     final fullName = user?['full_name']?.toString() ?? 'Ahmed';
     final initialLetter = fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'A';
     final unreadCount = context.watch<NotificationsProvider>().unreadCount;
 
-    return Drawer(
-      backgroundColor: const Color(0xFF0F273D),
-      width: 300,
-      child: Directionality(
-        textDirection: TextDirection.rtl,
-        child: SafeArea(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. ترويسة Maxlond
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF00A2A5),
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      alignment: Alignment.center,
-                      child: const Text(
-                        'ML',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 16,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    const Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            AppConstants.appName,
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 17,
-                            ),
-                          ),
-                          SizedBox(height: 2),
-                          Text(
-                            'إدارة المشاريع المدنية',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              color: Color(0xFF88A6BD),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const Divider(color: Color(0xFF1E3A52), height: 1),
-              const SizedBox(height: 10),
-
-              // 2. بطاقة المستخدم
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 20,
-                      backgroundColor: const Color(0xFF1E3A5F),
-                      child: Text(
-                        initialLetter,
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fullName,
-                            style: const TextStyle(
-                              fontFamily: 'Cairo',
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 15,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          const Text(
-                            'مدير النظام',
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              color: Color(0xFF88A6BD),
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 14),
-
-              // 3. عنوان الفئة
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-                child: Text(
-                  'القائمة الرئيسية',
-                  style: TextStyle(
-                    fontFamily: 'Cairo',
-                    color: Color(0xFF6B8BA4),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-
-              // 4. عناصر القائمة الثمانية المطابقة للصورة المرفقة
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  children: [
-                    _buildDrawerItem(0, 'لوحة التحكم', Icons.grid_view_rounded),
-                    _buildDrawerItem(1, 'المواقع', Icons.location_on_outlined),
-                    _buildDrawerItem(2, 'خطط العمل', Icons.assignment_outlined),
-                    _buildDrawerItem(3, 'التقارير اليومية', Icons.insert_chart_outlined_rounded),
-                    _buildDrawerItem(4, 'توقيع حركات المخزن', Icons.check_circle_outline_rounded),
-                    _buildDrawerItem(5, 'تحديثات المهندسين', Icons.rate_review_outlined),
-                    _buildDrawerItem(6, 'المستخدمون', Icons.people_outline_rounded),
-                    _buildDrawerItem(7, 'الإشعارات', Icons.notifications_none_rounded, unreadCount),
-                  ],
-                ),
-              ),
-
-              // 5. زر تسجيل الخروج والتذييل
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
-                child: InkWell(
-                  onTap: () {
-                    Navigator.pop(context);
-                    _handleLogout();
-                  },
-                  borderRadius: BorderRadius.circular(10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    final content = Directionality(
+      textDirection: TextDirection.rtl,
+      child: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 1. ترويسة Maxlond
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+              child: Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
                     decoration: BoxDecoration(
-                      color: const Color(0xFF16324D),
+                      color: const Color(0xFF00A2A5),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    alignment: Alignment.center,
+                    child: const Text(
+                      'ML',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.logout_rounded, color: Color(0xFFBACEDC), size: 18),
-                        SizedBox(width: 10),
                         Text(
-                          'تسجيل الخروج',
+                          AppConstants.appName,
                           style: TextStyle(
                             fontFamily: 'Cairo',
                             color: Colors.white,
-                            fontSize: 14,
                             fontWeight: FontWeight.bold,
+                            fontSize: 17,
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // التذييل: متصل ● الإصدار 2.0.0
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF00A2A5),
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        const Text(
-                          'متصل',
+                        SizedBox(height: 2),
+                        Text(
+                          'إدارة المشاريع المدنية',
                           style: TextStyle(
                             fontFamily: 'Cairo',
-                            color: Color(0xFF00A2A5),
+                            color: Color(0xFF88A6BD),
                             fontSize: 12,
                           ),
                         ),
                       ],
                     ),
-                    const Text(
-                      'الإصدار 2.0.0',
-                      style: TextStyle(
+                  ),
+                ],
+              ),
+            ),
+
+            const Divider(color: Color(0xFF1E3A52), height: 1),
+            const SizedBox(height: 10),
+
+            // 2. بطاقة المستخدم
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 20,
+                    backgroundColor: const Color(0xFF1E3A5F),
+                    child: Text(
+                      initialLetter,
+                      style: const TextStyle(
                         fontFamily: 'Cairo',
-                        color: Color(0xFF88A6BD),
-                        fontSize: 12,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
                       ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fullName,
+                          style: const TextStyle(
+                            fontFamily: 'Cairo',
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'مدير النظام',
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            color: Color(0xFF88A6BD),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 14),
+
+            // 3. عنوان الفئة
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 6),
+              child: Text(
+                'القائمة الرئيسية',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  color: Color(0xFF6B8BA4),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-            ],
-          ),
+            ),
+
+            // 4. عناصر القائمة الثمانية المطابقة للصورة المرفقة
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                children: [
+                  _buildDrawerItem(0, 'لوحة التحكم', Icons.dashboard_rounded, 0, isPermanent),
+                  _buildDrawerItem(1, 'المواقع', Icons.location_on_rounded, 0, isPermanent),
+                  _buildDrawerItem(2, 'خطط العمل', Icons.checklist_rounded, 0, isPermanent),
+                  _buildDrawerItem(3, 'التقارير اليومية', Icons.description_outlined, 0, isPermanent),
+                  _buildDrawerItem(4, 'توقيع حركات المخزن', Icons.verified_outlined, 0, isPermanent),
+                  _buildDrawerItem(5, 'تحديثات المهندسين', Icons.history_rounded, 0, isPermanent),
+                  _buildDrawerItem(6, 'المستخدمون', Icons.people_alt_outlined, 0, isPermanent),
+                  _buildDrawerItem(7, 'الإشعارات', Icons.notifications_rounded, unreadCount, isPermanent),
+                ],
+              ),
+            ),
+
+            // 5. زر تسجيل الخروج والتذييل
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
+              child: InkWell(
+                onTap: () {
+                  if (!isPermanent) Navigator.pop(context);
+                  _handleLogout();
+                },
+                borderRadius: BorderRadius.circular(10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF3B1E2B),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 18),
+                      SizedBox(width: 10),
+                      Text(
+                        'تسجيل الخروج',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // التذييل: متصل ● الإصدار 2.0.0
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Color(0xFF00A2A5),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'متصل',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: Color(0xFF00A2A5),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Text(
+                    'الإصدار 2.0.0',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      color: Color(0xFF88A6BD),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
+
+    if (isPermanent) {
+      return Container(
+        width: 280,
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F273D),
+          border: Border(left: BorderSide(color: Color(0xFF1E3A52), width: 1)),
+        ),
+        child: content,
+      );
+    }
+
+    return Drawer(
+      backgroundColor: const Color(0xFF0F273D),
+      width: 300,
+      child: content,
+    );
   }
 
-  Widget _buildDrawerItem(int index, String title, IconData icon, [int badge = 0]) {
+  Widget _buildDrawerItem(int index, String title, IconData icon, int badge, bool isPermanent) {
     final isSelected = _currentIndex == index;
 
     return Container(
@@ -302,7 +315,9 @@ class _AdminScaffoldState extends State<AdminScaffold> {
         color: Colors.transparent,
         child: InkWell(
           onTap: () {
-            Navigator.pop(context);
+            if (!isPermanent) {
+              Navigator.pop(context);
+            }
             _onSelectDrawerItem(index);
           },
           borderRadius: BorderRadius.circular(10),
@@ -360,45 +375,68 @@ class _AdminScaffoldState extends State<AdminScaffold> {
 
   @override
   Widget build(BuildContext context) {
-    final drawer = _buildDrawer(context);
+    final isWide = MediaQuery.of(context).size.width >= 850;
+    final mobileDrawer = isWide ? null : _buildDrawerContent(context, isPermanent: false);
+
+    final pages = [
+      DashboardScreen(
+        api: widget.api,
+        onNavigateTab: _onSelectDrawerItem,
+        drawer: mobileDrawer,
+      ),
+      SitesScreen(
+        api: widget.api,
+        drawer: mobileDrawer,
+      ),
+      TasksScreen(
+        api: widget.api,
+        drawer: mobileDrawer,
+      ),
+      ReportsScreen(
+        api: widget.api,
+        drawer: mobileDrawer,
+      ),
+      WarehouseMovesScreen(
+        api: widget.api,
+        drawer: mobileDrawer,
+      ),
+      EngineerUpdatesScreen(
+        api: widget.api,
+        drawer: mobileDrawer,
+      ),
+      UsersScreen(
+        api: widget.api,
+        drawer: mobileDrawer,
+      ),
+      NotificationsScreen(
+        api: widget.api,
+        drawer: mobileDrawer,
+      ),
+    ];
+
+    if (isWide) {
+      return Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: Directionality(
+          textDirection: TextDirection.rtl,
+          child: Row(
+            children: [
+              _buildDrawerContent(context, isPermanent: true),
+              Expanded(
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: pages,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return IndexedStack(
       index: _currentIndex,
-      children: [
-        DashboardScreen(
-          api: widget.api,
-          onNavigateTab: _onSelectDrawerItem,
-          drawer: drawer,
-        ),
-        SitesScreen(
-          api: widget.api,
-          drawer: drawer,
-        ),
-        TasksScreen(
-          api: widget.api,
-          drawer: drawer,
-        ),
-        ReportsScreen(
-          api: widget.api,
-          drawer: drawer,
-        ),
-        WarehouseMovesScreen(
-          api: widget.api,
-          drawer: drawer,
-        ),
-        EngineerUpdatesScreen(
-          api: widget.api,
-          drawer: drawer,
-        ),
-        UsersScreen(
-          api: widget.api,
-          drawer: drawer,
-        ),
-        NotificationsScreen(
-          api: widget.api,
-          drawer: drawer,
-        ),
-      ],
+      children: pages,
     );
   }
 }

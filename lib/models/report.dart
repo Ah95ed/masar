@@ -138,6 +138,8 @@ class Report {
   });
 
   bool get isApproved => status.toLowerCase() == 'approved';
+  int get workProgress => progressPercent;
+  int get manpowerCount => workersCount;
   bool get isRejected => status.toLowerCase() == 'rejected';
   bool get isSubmitted => status.toLowerCase() == 'submitted' || status.toLowerCase() == 'pending';
 

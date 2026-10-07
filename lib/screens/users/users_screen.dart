@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme.dart';
+import '../../core/constants.dart';
 import '../../models/user.dart';
 import '../../providers/users_provider.dart';
 import '../../services/admin_api.dart';
+import '../../widgets/auto_refresh_wrapper.dart';
 import '../../widgets/confirm_dialog.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/error_state.dart';
-import '../../widgets/loading_state.dart';
+import '../../widgets/pill.dart';
+import '../../widgets/state_view.dart';
+import 'pending_users_screen.dart';
 import 'user_form_screen.dart';
 
 class UsersScreen extends StatefulWidget {
@@ -43,10 +44,10 @@ class _UsersScreenState extends State<UsersScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            item == null ? 'تم إنشاء الحساب بنجاح' : 'تم تحديث الحساب بنجاح',
+            item == null ? 'تم إنشاء الحساب بنجاح' : 'تم تحديث بيانات الحساب بنجاح',
             style: const TextStyle(fontFamily: 'Cairo'),
           ),
-          backgroundColor: AppTheme.success,
+          backgroundColor: kGreen,
         ),
       );
     }
@@ -76,7 +77,7 @@ class _UsersScreenState extends State<UsersScreen> {
             willDeactivate ? 'تم تعطيل الحساب' : 'تم تفعيل الحساب بنجاح',
             style: const TextStyle(fontFamily: 'Cairo'),
           ),
-          backgroundColor: AppTheme.success,
+          backgroundColor: kGreen,
         ),
       );
     }
@@ -86,82 +87,131 @@ class _UsersScreenState extends State<UsersScreen> {
   Widget build(BuildContext context) {
     final usersProv = context.watch<UsersProvider>();
     final users = usersProv.filteredUsers;
+    final isWide = MediaQuery.of(context).size.width >= 850;
 
-    return Scaffold(
-      drawer: widget.drawer,
-      appBar: AppBar(
-        title: const Text('إدارة المستخدمين وفريق العمل'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person_add_rounded),
-            tooltip: 'إضافة مستخدم',
-            onPressed: () => _openForm(),
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 60),
+      onRefresh: () => usersProv.fetchUsers(),
+      child: Scaffold(
+        drawer: widget.drawer,
+        appBar: AppBar(
+          title: const Text('إدارة المستخدمين'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.person_add_rounded),
+              tooltip: 'إضافة حساب',
+              onPressed: () => _openForm(),
+            ),
+          ],
+        ),
+        body: StateView(
+          loading: usersProv.isLoading && usersProv.users.isEmpty,
+          error: usersProv.error,
+          empty: false,
+          onRetry: () => usersProv.fetchUsers(),
+          child: RefreshIndicator(
+            onRefresh: () => usersProv.fetchUsers(),
+            color: kCyan,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildHeaderBar(),
+                const SizedBox(height: 12),
+
+                _buildFilterChips(usersProv),
+                const SizedBox(height: 16),
+
+                if (users.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Text('لا يوجد مستخدمون يطابقون معايير البحث', style: TextStyle(fontFamily: 'Cairo', color: kMuted)),
+                    ),
+                  )
+                else if (isWide)
+                  _buildUsersTable(users)
+                else
+                  _buildUsersCards(users),
+              ],
+            ),
           ),
-        ],
-      ),
-      body: usersProv.isLoading && usersProv.users.isEmpty
-          ? const LoadingState(message: 'جاري تحميل المستخدمين...')
-          : usersProv.error != null && usersProv.users.isEmpty
-              ? ErrorState(message: usersProv.error!, onRetry: () => usersProv.fetchUsers())
-              : RefreshIndicator(
-                  onRefresh: () => usersProv.fetchUsers(),
-                  color: AppTheme.primaryTeal,
-                  child: Column(
-                    children: [
-                      _buildFiltersHeader(usersProv),
-                      Expanded(
-                        child: users.isEmpty
-                            ? const EmptyState(
-                                title: 'لا يوجد مستخدمون',
-                                message: 'لم يتم العثور على مستخدمين يطابقون خيارات البحث',
-                                icon: Icons.people_outline,
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                itemCount: users.length,
-                                itemBuilder: (context, index) {
-                                  final user = users[index];
-                                  return _buildUserTile(user);
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        backgroundColor: AppTheme.primaryDark,
-        child: const Icon(Icons.add, color: Colors.white),
+        ),
+        floatingActionButton: FloatingActionButton(
+          heroTag: 'users_fab',
+          onPressed: () => _openForm(),
+          backgroundColor: kInk,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
       ),
     );
   }
 
-  Widget _buildFiltersHeader(UsersProvider prov) {
+  Widget _buildHeaderBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      color: Colors.white,
-      child: Column(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kLine),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          TextField(
-            onChanged: (v) => prov.setSearch(v),
-            decoration: const InputDecoration(
-              hintText: 'بحث بالاسم، اسم المستخدم، البريد...',
-              prefixIcon: Icon(Icons.search, size: 20),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            ),
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'حسابات النظام والصلاحيات',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: kInk),
+              ),
+              Text(
+                'إدارة حسابات المهندسين والمحاسبين واعتماد طلبات التسجيل',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kMuted),
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildRoleChip('all', 'الكل (${prov.users.length})', prov),
-                _buildRoleChip('engineer', 'المهندسون', prov),
-                _buildRoleChip('accountant', 'المحاسبون', prov),
-                _buildRoleChip('admin', 'المدراء', prov),
-              ],
-            ),
+          Row(
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => PendingUsersScreen(api: widget.api)),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kAmber,
+                  side: const BorderSide(color: kAmber),
+                ),
+                icon: const Icon(Icons.pending_actions_rounded, size: 16),
+                label: const Text('طلبات التسجيل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
+              ),
+              const SizedBox(width: 8),
+              FilledButton.icon(
+                onPressed: () => _openForm(),
+                style: FilledButton.styleFrom(backgroundColor: kInk),
+                icon: const Icon(Icons.person_add_rounded, size: 16),
+                label: const Text('إضافة حساب', style: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
+              ),
+            ],
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChips(UsersProvider prov) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildRoleChip('all', 'الكل (${prov.users.length})', prov),
+          const SizedBox(width: 8),
+          _buildRoleChip('engineer', 'المهندسون', prov),
+          const SizedBox(width: 8),
+          _buildRoleChip('accountant', 'المحاسبون', prov),
+          const SizedBox(width: 8),
+          _buildRoleChip('warehouse', 'أمناء المخازن', prov),
+          const SizedBox(width: 8),
+          _buildRoleChip('admin', 'الإدارة', prov),
         ],
       ),
     );
@@ -169,183 +219,186 @@ class _UsersScreenState extends State<UsersScreen> {
 
   Widget _buildRoleChip(String role, String label, UsersProvider prov) {
     final isSelected = prov.filterRole == role;
-    return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: FilterChip(
-        label: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.white : AppTheme.textPrimary,
-          ),
-        ),
-        selected: isSelected,
-        onSelected: (_) => prov.setRoleFilter(role),
-        selectedColor: AppTheme.primaryDark,
-        backgroundColor: Colors.grey.shade100,
-        checkmarkColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => prov.setRoleFilter(role),
+      selectedColor: kInk,
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        fontFamily: 'Cairo',
+        fontSize: 12,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        color: isSelected ? Colors.white : kInk,
       ),
+      side: BorderSide(color: isSelected ? kInk : kLine),
     );
   }
 
-  Widget _buildUserTile(User user) {
-    final isActive = user.isActive == 1;
-
+  Widget _buildUsersTable(List<User> users) {
     return Card(
       elevation: 0,
-      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: kLine),
       ),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: _getRoleColor(user.role).withOpacity(0.12),
-          child: Icon(
-            _getRoleIcon(user.role),
-            color: _getRoleColor(user.role),
-            size: 20,
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                user.fullName,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: (isActive ? AppTheme.success : AppTheme.danger).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                isActive ? 'نشط' : 'معطل',
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: isActive ? AppTheme.success : AppTheme.danger,
-                ),
-              ),
-            ),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: DataTable(
+          headingRowColor: WidgetStateProperty.all(kPaper),
+          columns: const [
+            DataColumn(label: Text('المستخدم', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('الدور', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('التواصل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('آخر دخول', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('الإجراء', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
           ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 2),
-            Text(
-              '@${user.username} • ${user.email}',
-              style: const TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 12,
-                color: AppTheme.textMuted,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              _getRoleName(user.role),
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 11,
-                fontWeight: FontWeight.bold,
-                color: _getRoleColor(user.role),
-              ),
-            ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textMuted),
-          onSelected: (val) {
-            if (val == 'edit') _openForm(item: user);
-            if (val == 'toggle') _toggleStatus(user);
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'edit',
-              child: Row(
-                children: [
-                  Icon(Icons.edit_outlined, size: 18),
-                  SizedBox(width: 8),
-                  Text('تعديل الحساب', style: TextStyle(fontFamily: 'Cairo', fontSize: 13)),
-                ],
-              ),
-            ),
-            PopupMenuItem(
-              value: 'toggle',
-              child: Row(
-                children: [
-                  Icon(
-                    isActive ? Icons.block_outlined : Icons.check_circle_outline,
-                    size: 18,
-                    color: isActive ? AppTheme.danger : AppTheme.success,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    isActive ? 'تعطيل الحساب' : 'تفعيل الحساب',
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 13,
-                      color: isActive ? AppTheme.danger : AppTheme.success,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          rows: users.map((u) {
+            final isAdmin = u.role == 'admin';
+            final isActive = u.isActive == 1;
+
+            return DataRow(
+              cells: [
+                DataCell(Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(u.fullName.isNotEmpty ? u.fullName : u.username, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+                    Text('${u.username} · ${u.email}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted)),
+                  ],
+                )),
+                DataCell(Text(u.roleLabel, style: const TextStyle(fontFamily: 'Cairo'))),
+                DataCell(Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(u.phone ?? '-', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12)),
+                    if (u.specialization != null)
+                      Text(u.specialization!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: kMuted)),
+                  ],
+                )),
+                DataCell(_buildStatusPill(u)),
+                DataCell(const Text('مسجل نشط', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted))),
+                DataCell(Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (isAdmin)
+                      const Pill.info(text: 'محمي')
+                    else ...[
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
+                        tooltip: 'تعديل',
+                        onPressed: () => _openForm(item: u),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          isActive ? Icons.block_rounded : Icons.check_circle_outline,
+                          size: 18,
+                          color: isActive ? kRed : kGreen,
+                        ),
+                        tooltip: isActive ? 'تعطيل' : 'تفعيل',
+                        onPressed: () => _toggleStatus(u),
+                      ),
+                    ],
+                  ],
+                )),
+              ],
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
-  String _getRoleName(String role) {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return 'مدير عام';
-      case 'engineer':
-        return 'مهندس موقع';
-      case 'accountant':
-        return 'محاسب مالي';
-      default:
-        return role;
-    }
+  Widget _buildUsersCards(List<User> users) {
+    return Column(
+      children: users.map((u) {
+        final isAdmin = u.role == 'admin';
+        final isActive = u.isActive == 1;
+
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: kLine),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      u.fullName.isNotEmpty ? u.fullName : u.username,
+                      style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: kInk),
+                    ),
+                    _buildStatusPill(u),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${u.roleLabel} · ${u.username} · ${u.email}',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kMuted),
+                ),
+                if (u.phone != null) ...[
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.phone_outlined, size: 13, color: kMuted),
+                      const SizedBox(width: 4),
+                      Text(u.phone!, style: const TextStyle(fontSize: 11, color: kMuted)),
+                      if (u.specialization != null) ...[
+                        const SizedBox(width: 10),
+                        const Icon(Icons.work_outline, size: 13, color: kMuted),
+                        const SizedBox(width: 4),
+                        Text(u.specialization!, style: const TextStyle(fontSize: 11, color: kMuted)),
+                      ],
+                    ],
+                  ),
+                ],
+                const Divider(height: 18, color: kLine),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (isAdmin)
+                      const Pill.info(text: 'حساب المدير العام محمي')
+                    else ...[
+                      TextButton.icon(
+                        onPressed: () => _openForm(item: u),
+                        icon: const Icon(Icons.edit_outlined, size: 16, color: kCyan),
+                        label: const Text('تعديل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kCyan)),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () => _toggleStatus(u),
+                        icon: Icon(isActive ? Icons.block_rounded : Icons.check_circle_outline, size: 16, color: isActive ? kRed : kGreen),
+                        label: Text(
+                          isActive ? 'تعطيل الحساب' : 'تفعيل الحساب',
+                          style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: isActive ? kRed : kGreen),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
   }
 
-  Color _getRoleColor(String role) {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return AppTheme.primaryDark;
-      case 'engineer':
-        return AppTheme.primaryTeal;
-      case 'accountant':
-        return const Color(0xFF6366F1);
-      default:
-        return AppTheme.textSecondary;
+  Widget _buildStatusPill(User u) {
+    if (!u.isApproved) {
+      return const Pill.warning(text: 'بانتظار الاعتماد');
     }
-  }
-
-  IconData _getRoleIcon(String role) {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return Icons.admin_panel_settings_outlined;
-      case 'engineer':
-        return Icons.engineering_outlined;
-      case 'accountant':
-        return Icons.account_balance_outlined;
-      default:
-        return Icons.person_outline;
+    if (u.isActive == 1) {
+      return const Pill.success(text: 'معتمد ومفعل');
     }
+    return const Pill.warning(text: 'معتمد ومعطل');
   }
 }

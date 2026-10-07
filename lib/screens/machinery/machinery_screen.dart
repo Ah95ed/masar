@@ -1,16 +1,16 @@
-﻿import 'package:flutter/material.dart';
-import '../../core/api_exception.dart';
-import '../../core/theme.dart';
+import 'package:flutter/material.dart';
+import '../../core/constants.dart';
 import '../../models/machinery.dart';
 import '../../services/admin_api.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/error_state.dart';
-import '../../widgets/loading_state.dart';
+import '../../widgets/auto_refresh_wrapper.dart';
+import '../../widgets/pill.dart';
+import '../../widgets/state_view.dart';
 
 class MachineryScreen extends StatefulWidget {
   final AdminApi api;
+  final Widget? drawer;
 
-  const MachineryScreen({super.key, required this.api});
+  const MachineryScreen({super.key, required this.api, this.drawer});
 
   @override
   State<MachineryScreen> createState() => _MachineryScreenState();
@@ -28,7 +28,6 @@ class _MachineryScreenState extends State<MachineryScreen> {
     _load();
   }
 
-  // ✅ جلب البيانات دائماً من السيرفر
   Future<void> _load() async {
     setState(() {
       _loading = true;
@@ -42,207 +41,376 @@ class _MachineryScreenState extends State<MachineryScreen> {
         _machinery = (res as List).map((e) => Machinery.fromJson(e)).toList();
         _loading = false;
       });
-    } on ApiException catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'حدث خطأ أثناء تحميل أسطول الآليات والمعدات';
+        _error = 'تعذر تحميل قائمة الآليات والمعدات';
         _loading = false;
       });
     }
+  }
+
+  Future<void> _silentRefresh() async {
+    try {
+      final res = await widget.api.get('machinery');
+      if (!mounted) return;
+      setState(() {
+        _machinery = (res as List).map((e) => Machinery.fromJson(e)).toList();
+      });
+    } catch (_) {}
   }
 
   List<Machinery> get _filteredMachinery {
     if (_filterStatus == 'all') return _machinery;
-    return _machinery.where((m) => m.status == _filterStatus).toList();
+    return _machinery.where((m) => m.status.toLowerCase() == _filterStatus.toLowerCase()).toList();
+  }
+
+  Future<void> _openForm({Machinery? item}) async {
+    final codeCtrl = TextEditingController(text: item?.code ?? '');
+    final nameCtrl = TextEditingController(text: item?.name ?? '');
+    final plateCtrl = TextEditingController(text: item?.plateNumber ?? '');
+    final driverCtrl = TextEditingController(text: item?.driverName ?? '');
+    final hourlyRateCtrl = TextEditingController(
+      text: item?.hourlyRate != null && item!.hourlyRate > 0 ? item.hourlyRate.toStringAsFixed(0) : '',
+    );
+    String status = item?.status ?? 'available';
+
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDlgState) => AlertDialog(
+          title: Text(item == null ? 'إضافة آلية جديدة' : 'تعديل بيانات الآلية', style: const TextStyle(fontFamily: 'Cairo')),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: codeCtrl,
+                  decoration: const InputDecoration(labelText: 'كود الآلية *'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: nameCtrl,
+                  decoration: const InputDecoration(labelText: 'اسم / نوع الآلية *'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: plateCtrl,
+                  decoration: const InputDecoration(labelText: 'رقم اللوحة'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: driverCtrl,
+                  decoration: const InputDecoration(labelText: 'اسم المشغل / السائق'),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: hourlyRateCtrl,
+                  keyboardType: TextInputType.number,
+                  decoration: const InputDecoration(labelText: 'كلفة الساعة (\$)'),
+                ),
+                const SizedBox(height: 10),
+                DropdownButtonFormField<String>(
+                  value: status,
+                  decoration: const InputDecoration(labelText: 'حالة الآلية'),
+                  items: const [
+                    DropdownMenuItem(value: 'available', child: Text('جاهزة ومتاحة')),
+                    DropdownMenuItem(value: 'in_use', child: Text('قيد الاستخدام بالموقع')),
+                    DropdownMenuItem(value: 'maintenance', child: Text('تحت الصيانة')),
+                    DropdownMenuItem(value: 'out_of_service', child: Text('خارج الخدمة')),
+                  ],
+                  onChanged: (v) => setDlgState(() => status = v ?? 'available'),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: kInk),
+              child: const Text('حفظ البيانات', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (saved != true || !mounted) return;
+
+    try {
+      await widget.api.post('machinery-save', {
+        'id': item?.id ?? 0,
+        'code': codeCtrl.text.trim(),
+        'name': nameCtrl.text.trim(),
+        'plate_number': plateCtrl.text.trim(),
+        'driver_name': driverCtrl.text.trim(),
+        'hourly_rate': double.tryParse(hourlyRateCtrl.text.trim()) ?? 0.0,
+        'status': status,
+      });
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(item == null ? 'تمت إضافة الآلية بنجاح' : 'تم تحديث الآلية بنجاح', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kGreen,
+        ),
+      );
+      await _load();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('فشل حفظ الآلية: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('أسطول الآليات والمعدات الثقيلة'),
-        // ⚠️ لا يوجد زر Refresh في الـ AppBar
+    final list = _filteredMachinery;
+    final isWide = MediaQuery.of(context).size.width >= 850;
+
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 60),
+      onRefresh: _silentRefresh,
+      child: Scaffold(
+        drawer: widget.drawer,
+        appBar: AppBar(
+          title: const Text('أسطول الآليات والمعدات'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline_rounded),
+              tooltip: 'إضافة آلية',
+              onPressed: () => _openForm(),
+            ),
+          ],
+        ),
+        body: StateView(
+          loading: _loading && _machinery.isEmpty,
+          error: _error,
+          empty: false,
+          onRetry: _load,
+          child: RefreshIndicator(
+            onRefresh: _load,
+            color: kCyan,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _buildHeaderBar(),
+                const SizedBox(height: 12),
+
+                _buildFilterChips(),
+                const SizedBox(height: 16),
+
+                if (list.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Text('لا توجد آليات تطابق التصفية الحالية', style: TextStyle(fontFamily: 'Cairo', color: kMuted)),
+                    ),
+                  )
+                else if (isWide)
+                  _buildMachineryTable(list)
+                else
+                  _buildMachineryCards(list),
+              ],
+            ),
+          ),
+        ),
       ),
-      body: _loading
-          ? const LoadingState(message: 'جاري تحميل سجل الآليات...')
-          : _error != null
-              ? ErrorState(message: _error!, onRetry: _load)
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  color: AppTheme.primaryTeal,
-                  child: Column(
-                    children: [
-                      _buildFiltersHeader(),
-                      Expanded(
-                        child: _filteredMachinery.isEmpty
-                            ? const EmptyState(
-                                title: 'لا توجد آليات',
-                                message: 'لم يتم العثور على معدات بالحالة المحددة',
-                                icon: Icons.precision_manufacturing_outlined,
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                itemCount: _filteredMachinery.length,
-                                itemBuilder: (context, index) {
-                                  final m = _filteredMachinery[index];
-                                  return _buildMachineryCard(m);
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
     );
   }
 
-  Widget _buildFiltersHeader() {
+  Widget _buildHeaderBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      color: Colors.white,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kLine),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'الآليات والمعدات الثقيلة',
+                style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: kInk),
+              ),
+              Text(
+                'متابعة جاهزية وتوزيع الآليات وتكاليف التشغيل بالساعة',
+                style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kMuted),
+              ),
+            ],
+          ),
+          FilledButton.icon(
+            onPressed: () => _openForm(),
+            style: FilledButton.styleFrom(backgroundColor: kInk),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text('+ إضافة آلية', style: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChips() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildChoiceChip('all', 'الكل (${_machinery.length})'),
+          const SizedBox(width: 8),
+          _buildChoiceChip('available', 'جاهزة ومتاحة'),
+          const SizedBox(width: 8),
+          _buildChoiceChip('in_use', 'قيد العمل'),
+          const SizedBox(width: 8),
+          _buildChoiceChip('maintenance', 'تحت الصيانة'),
+          const SizedBox(width: 8),
+          _buildChoiceChip('out_of_service', 'خارج الخدمة'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoiceChip(String status, String label) {
+    final isSelected = _filterStatus == status;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => setState(() => _filterStatus = status),
+      selectedColor: kInk,
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        fontFamily: 'Cairo',
+        fontSize: 12,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        color: isSelected ? Colors.white : kInk,
+      ),
+      side: BorderSide(color: isSelected ? kInk : kLine),
+    );
+  }
+
+  Widget _buildMachineryTable(List<Machinery> list) {
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: kLine),
+      ),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
-        child: Row(
-          children: [
-            _buildStatusChip('all', 'الكل (${_machinery.length})'),
-            _buildStatusChip('available', 'متاحة للعمل'),
-            _buildStatusChip('in_use', 'قيد التشغيل بالموقع'),
-            _buildStatusChip('maintenance', 'تحت الصيانة'),
-            _buildStatusChip('out_of_service', 'خارج الخدمة'),
+        child: DataTable(
+          headingRowColor: WidgetStateProperty.all(kPaper),
+          columns: const [
+            DataColumn(label: Text('الكود', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('الآلية', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('اللوحة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('المشغل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('كلفة الساعة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+            DataColumn(label: Text('الإجراء', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
           ],
+          rows: list.map((m) {
+            final isAvailable = m.status == 'available';
+
+            return DataRow(
+              cells: [
+                DataCell(Pill.info(text: m.code)),
+                DataCell(Text(m.name, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+                DataCell(Text(m.plateNumber ?? '-', style: const TextStyle(fontFamily: 'Cairo'))),
+                DataCell(Text(m.driverName ?? 'غير معين', style: const TextStyle(fontFamily: 'Cairo'))),
+                DataCell(Pill(
+                  text: m.statusLabel,
+                  type: isAvailable ? PillType.success : PillType.neutral,
+                )),
+                DataCell(Text('${m.hourlyRate.toStringAsFixed(0)} \$', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
+                DataCell(IconButton(
+                  icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
+                  tooltip: 'تعديل',
+                  onPressed: () => _openForm(item: m),
+                )),
+              ],
+            );
+          }).toList(),
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(String status, String label) {
-    final isSelected = _filterStatus == status;
-    return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: ChoiceChip(
-        label: Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12)),
-        selected: isSelected,
-        selectedColor: AppTheme.primaryDark,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.white : AppTheme.textSecondary,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        ),
-        onSelected: (_) => setState(() => _filterStatus = status),
-      ),
-    );
-  }
+  Widget _buildMachineryCards(List<Machinery> list) {
+    return Column(
+      children: list.map((m) {
+        final isAvailable = m.status == 'available';
 
-  Widget _buildMachineryCard(Machinery m) {
-    Color statusBg = AppTheme.border;
-    Color statusFg = AppTheme.textSecondary;
-    String statusText = m.status;
-
-    switch (m.status) {
-      case 'available':
-        statusBg = AppTheme.successLight;
-        statusFg = AppTheme.success;
-        statusText = 'متاحة';
-        break;
-      case 'in_use':
-        statusBg = AppTheme.infoLight;
-        statusFg = AppTheme.info;
-        statusText = 'قيد العمل';
-        break;
-      case 'maintenance':
-        statusBg = AppTheme.warningLight;
-        statusFg = AppTheme.warning;
-        statusText = 'صيانة';
-        break;
-      case 'out_of_service':
-        statusBg = AppTheme.dangerLight;
-        statusFg = AppTheme.danger;
-        statusText = 'خارج الخدمة';
-        break;
-    }
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+        return Card(
+          elevation: 0,
+          margin: const EdgeInsets.only(bottom: 10),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: kLine),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    m.name,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Pill.info(text: m.code),
+                    Pill(
+                      text: m.statusLabel,
+                      type: isAvailable ? PillType.success : PillType.neutral,
                     ),
-                  ),
+                  ],
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(color: statusBg, borderRadius: BorderRadius.circular(20)),
-                  child: Text(
-                    statusText,
-                    style: TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: statusFg,
+                const SizedBox(height: 6),
+                Text(
+                  m.name,
+                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: kInk),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(Icons.pin_outlined, size: 13, color: kMuted),
+                    const SizedBox(width: 4),
+                    Text('لوحة: ${m.plateNumber ?? "بدون"}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted)),
+                    const Spacer(),
+                    const Icon(Icons.person_outline, size: 13, color: kMuted),
+                    const SizedBox(width: 4),
+                    Text('سائق: ${m.driverName ?? "غير معين"}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted)),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'كلفة الساعة: ${m.hourlyRate.toStringAsFixed(0)} \$',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: kGreen),
+                ),
+                const Divider(height: 18, color: kLine),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      onPressed: () => _openForm(item: m),
+                      icon: const Icon(Icons.edit_outlined, size: 16, color: kCyan),
+                      label: const Text('تعديل البيانات', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kCyan)),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                if (m.code.isNotEmpty)
-                  Text(
-                    'الكود: ${m.code}  ·  ',
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textMuted),
-                  ),
-                if (m.plateNumber != null && m.plateNumber!.isNotEmpty)
-                  Text(
-                    'رقم اللوحة: ${m.plateNumber}',
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
-                  ),
-              ],
-            ),
-            if (m.operatorName != null && m.operatorName!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.person_outline, size: 14, color: AppTheme.textMuted),
-                  const SizedBox(width: 4),
-                  Text(
-                    'السائق / المشغّل: ${m.operatorName}',
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
-                  ),
-                ],
-              ),
-            ],
-            if (m.hourlyCost > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                'كلفة الساعة: ${m.hourlyCost.toStringAsFixed(0)} د.ع',
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.accentCyan,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

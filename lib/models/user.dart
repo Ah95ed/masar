@@ -24,6 +24,23 @@ class User {
   bool get isApproved => approvalStatus.toLowerCase() == 'approved';
   bool get active => isActive == 1;
 
+  String get roleLabel {
+    switch (role.toLowerCase()) {
+      case 'admin':
+        return 'مدير النظام';
+      case 'engineer':
+        return 'مهندس';
+      case 'accountant':
+        return 'محاسب';
+      case 'warehouse':
+        return 'أمين مخزن';
+      case 'fleet_manager':
+        return 'مسؤول أسطول';
+      default:
+        return role;
+    }
+  }
+
   factory User.fromJson(Map<String, dynamic> json) {
     int parseId(dynamic v) {
       if (v == null) return 0;

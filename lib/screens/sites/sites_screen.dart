@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../core/theme.dart';
+
+import '../../core/constants.dart';
 import '../../models/site.dart';
 import '../../providers/sites_provider.dart';
 import '../../services/admin_api.dart';
+import '../../widgets/auto_refresh_wrapper.dart';
 import '../../widgets/confirm_dialog.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/error_state.dart';
-import '../../widgets/loading_state.dart';
+import '../../widgets/pill.dart';
+import '../../widgets/state_view.dart';
 import 'site_form_screen.dart';
 
 class SitesScreen extends StatefulWidget {
@@ -43,10 +44,12 @@ class _SitesScreenState extends State<SitesScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            item == null ? 'تم إنشاء الموقع بنجاح' : 'تم تحديث بيانات الموقع بنجاح',
+            item == null
+                ? 'تم إنشاء الموقع بنجاح'
+                : 'تم تحديث بيانات الموقع بنجاح',
             style: const TextStyle(fontFamily: 'Cairo'),
           ),
-          backgroundColor: AppTheme.success,
+          backgroundColor: kGreen,
         ),
       );
     }
@@ -56,7 +59,7 @@ class _SitesScreenState extends State<SitesScreen> {
     final confirmed = await ConfirmDialog.show(
       context,
       title: 'إلغاء الموقع',
-      message: 'هل أنت متأكد من رغبتك في إلغاء موقع "${site.name}"؟',
+      message: 'هل أنت متأكد من رغبتك في إلغاء وتجميد موقع "${site.name}"؟',
       confirmText: 'إلغاء الموقع',
       isDestructive: true,
     );
@@ -69,8 +72,11 @@ class _SitesScreenState extends State<SitesScreen> {
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('تم إلغاء الموقع بنجاح', style: TextStyle(fontFamily: 'Cairo')),
-          backgroundColor: AppTheme.success,
+          content: Text(
+            'تم إلغاء الموقع بنجاح',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          backgroundColor: kGreen,
         ),
       );
     }
@@ -80,237 +86,276 @@ class _SitesScreenState extends State<SitesScreen> {
   Widget build(BuildContext context) {
     final sitesProv = context.watch<SitesProvider>();
     final sites = sitesProv.filteredSites;
+    final width = MediaQuery.of(context).size.width;
+    final isTablet = width >= 850;
 
-    return Scaffold(
-      drawer: widget.drawer,
-      appBar: AppBar(
-        title: const Text('المواقع والمشاريع'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add_business_rounded),
-            tooltip: 'إضافة موقع',
-            onPressed: () => _openForm(),
-          ),
-        ],
-      ),
-      body: sitesProv.isLoading && sitesProv.sites.isEmpty
-          ? const LoadingState(message: 'جاري تحميل المواقع...')
-          : sitesProv.error != null && sitesProv.sites.isEmpty
-              ? ErrorState(message: sitesProv.error!, onRetry: () => sitesProv.fetchSites())
-              : RefreshIndicator(
-                  onRefresh: () => sitesProv.fetchSites(),
-                  color: AppTheme.primaryTeal,
-                  child: Column(
-                    children: [
-                      _buildFiltersHeader(sitesProv),
-                      Expanded(
-                        child: sites.isEmpty
-                            ? const EmptyState(
-                                title: 'لا توجد مواقع',
-                                message: 'لم يتم العثور على أي مواقع تطابق معايير البحث',
-                                icon: Icons.business_outlined,
-                              )
-                            : ListView.builder(
-                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                itemCount: sites.length,
-                                itemBuilder: (context, index) {
-                                  final site = sites[index];
-                                  return _buildSiteTile(site);
-                                },
-                              ),
-                      ),
-                    ],
-                  ),
-                ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _openForm(),
-        backgroundColor: AppTheme.primaryDark,
-        child: const Icon(Icons.add, color: Colors.white),
-      ),
-    );
-  }
-
-  Widget _buildFiltersHeader(SitesProvider prov) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-      color: Colors.white,
-      child: Column(
-        children: [
-          TextField(
-            onChanged: (v) => prov.setSearch(v),
-            decoration: const InputDecoration(
-              hintText: 'بحث باسم الموقع، الرمز، العميل...',
-              prefixIcon: Icon(Icons.search, size: 20),
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 30),
+      onRefresh: () => sitesProv.fetchSites(),
+      child: Scaffold(
+        drawer: widget.drawer,
+        appBar: AppBar(
+          title: const Text('المواقع والمشاريع'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add_business_rounded),
+              tooltip: 'موقع جديد',
+              onPressed: () => _openForm(),
             ),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
+          ],
+        ),
+        body: StateView(
+          loading: sitesProv.isLoading && sitesProv.sites.isEmpty,
+          error: sitesProv.error,
+          empty: false,
+          onRetry: () => sitesProv.fetchSites(),
+          child: RefreshIndicator(
+            onRefresh: () => sitesProv.fetchSites(),
+            color: kCyan,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
               children: [
-                _buildStatusChip('all', 'الكل (${prov.sites.length})', prov),
-                _buildStatusChip('active', 'نشط', prov),
-                _buildStatusChip('planning', 'تخطيط', prov),
-                _buildStatusChip('paused', 'متوقف', prov),
-                _buildStatusChip('completed', 'مكتمل', prov),
-                _buildStatusChip('cancelled', 'ملغي', prov),
+                // رأس: المواقع والمشاريع + وصف + زر + موقع جديد
+                _buildHeaderBar(sitesProv),
+                const SizedBox(height: 12),
+
+                // 4 مربعات فلترة (ChoiceChips)
+                _buildFilterChips(sitesProv),
+                const SizedBox(height: 16),
+
+                if (sites.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Text(
+                        'لا توجد مواقع تطابق معايير البحث',
+                        style: TextStyle(fontFamily: 'Cairo', color: kMuted),
+                      ),
+                    ),
+                  )
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: isTablet ? 3 : (width >= 600 ? 2 : 1),
+                      mainAxisExtent: 220,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: sites.length,
+                    itemBuilder: (context, index) =>
+                        _buildSiteCard(sites[index]),
+                  ),
               ],
             ),
           ),
+        ),
+        floatingActionButton: FloatingActionButton(
+          heroTag: 'sites_fab',
+          onPressed: () => _openForm(),
+          backgroundColor: kInk,
+          child: const Icon(Icons.add, color: Colors.white),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderBar(SitesProvider prov) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: kLine),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'المواقع والمشاريع الإنشائية',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: kInk,
+                ),
+              ),
+              Text(
+                'متابعة حالة مواقع العمل والميزانيات والمهندسين المشرفين',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 12,
+                  color: kMuted,
+                ),
+              ),
+            ],
+          ),
+          FilledButton.icon(
+            onPressed: () => _openForm(),
+            style: FilledButton.styleFrom(backgroundColor: kInk),
+            icon: const Icon(Icons.add_rounded, size: 18),
+            label: const Text(
+              '+ موقع جديد',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildStatusChip(String status, String label, SitesProvider prov) {
-    final isSelected = prov.filterStatus == status;
-    return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: FilterChip(
-        label: Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 12,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            color: isSelected ? Colors.white : AppTheme.textPrimary,
-          ),
-        ),
-        selected: isSelected,
-        onSelected: (_) => prov.setFilter(status),
-        selectedColor: AppTheme.primaryDark,
-        backgroundColor: Colors.grey.shade100,
-        checkmarkColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+  Widget _buildFilterChips(SitesProvider prov) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _buildChoiceChip('all', 'الكل (${prov.sites.length})', prov),
+          const SizedBox(width: 8),
+          _buildChoiceChip('active', 'نشط', prov),
+          const SizedBox(width: 8),
+          _buildChoiceChip('completed', 'مكتمل', prov),
+          const SizedBox(width: 8),
+          _buildChoiceChip('cancelled', 'ملغى', prov),
+        ],
       ),
     );
   }
 
-  Widget _buildSiteTile(Site site) {
+  Widget _buildChoiceChip(String status, String label, SitesProvider prov) {
+    final isSelected = prov.filterStatus == status;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (_) => prov.setFilter(status),
+      selectedColor: kInk,
+      backgroundColor: Colors.white,
+      labelStyle: TextStyle(
+        fontFamily: 'Cairo',
+        fontSize: 12,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        color: isSelected ? Colors.white : kInk,
+      ),
+      side: BorderSide(color: isSelected ? kInk : kLine),
+    );
+  }
+
+  Widget _buildSiteCard(Site site) {
+    final isActive = site.status == 'active';
+
     return Card(
       elevation: 0,
-      color: Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: const BorderSide(color: AppTheme.border),
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: kLine),
       ),
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-        leading: CircleAvatar(
-          backgroundColor: _getStatusColor(site.status).withOpacity(0.12),
-          child: Icon(
-            Icons.location_city_rounded,
-            color: _getStatusColor(site.status),
-            size: 20,
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                site.name,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: FontWeight.bold,
-                  fontSize: 14,
-                ),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: _getStatusColor(site.status).withOpacity(0.12),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(
-                site.statusLabel,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                  color: _getStatusColor(site.status),
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Column(
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 2),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Pill.info(
+                  text: site.code.isNotEmpty ? site.code : 'SP-${site.id}',
+                ),
+                Pill(
+                  text: site.statusLabel,
+                  type: isActive ? PillType.success : PillType.neutral,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
-              'الرمز: ${site.code} • العميل: ${site.clientName}',
+              site.name,
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontWeight: FontWeight.bold,
+                fontSize: 17,
+                color: kInk,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'العميل: ${site.clientName.isNotEmpty ? site.clientName : "غير محدد"}',
               style: const TextStyle(
                 fontFamily: 'Cairo',
                 fontSize: 12,
-                color: AppTheme.textMuted,
+                color: kMuted,
               ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            if (site.budget > 0) ...[
-              const SizedBox(height: 2),
+            Text(
+              'المهندس: ${site.managerName != null && site.managerName!.isNotEmpty ? site.managerName! : "غير معين"}',
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: kMuted,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            if (site.location != null && site.location!.isNotEmpty)
               Text(
-                'الميزانية: ${site.budget.toStringAsFixed(0)} \$',
+                site.location!,
                 style: const TextStyle(
                   fontFamily: 'Cairo',
                   fontSize: 11,
-                  color: AppTheme.textSecondary,
-                  fontWeight: FontWeight.bold,
+                  color: kCyan,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ],
+            const Spacer(),
+            const Divider(height: 1, color: kLine),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _openForm(item: site),
+                  icon: const Icon(Icons.edit_outlined, size: 16, color: kCyan),
+                  label: const Text(
+                    'تعديل',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      color: kCyan,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  onPressed: () => _cancelSite(site),
+                  icon: const Icon(
+                    Icons.delete_outline_rounded,
+                    size: 16,
+                    color: kRed,
+                  ),
+                  label: const Text(
+                    'حذف',
+                    style: TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      color: kRed,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
-        trailing: site.isCancelled
-            ? null
-            : PopupMenuButton<String>(
-                icon: const Icon(Icons.more_vert, size: 20, color: AppTheme.textMuted),
-                onSelected: (val) {
-                  if (val == 'edit') _openForm(item: site);
-                  if (val == 'cancel') _cancelSite(site);
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 18),
-                        SizedBox(width: 8),
-                        Text('تعديل الموقع', style: TextStyle(fontFamily: 'Cairo', fontSize: 13)),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'cancel',
-                    child: Row(
-                      children: [
-                        Icon(Icons.cancel_outlined, size: 18, color: AppTheme.danger),
-                        SizedBox(width: 8),
-                        Text('إلغاء الموقع', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: AppTheme.danger)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
       ),
     );
-  }
-
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
-      case 'active':
-        return AppTheme.primaryTeal;
-      case 'planning':
-        return const Color(0xFF6366F1);
-      case 'paused':
-        return AppTheme.warning;
-      case 'completed':
-        return AppTheme.success;
-      case 'cancelled':
-        return AppTheme.danger;
-      default:
-        return AppTheme.textSecondary;
-    }
   }
 }

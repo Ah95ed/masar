@@ -1,4 +1,4 @@
-﻿class Machinery {
+class Machinery {
   final int id;
   final String code;
   final String name;
@@ -18,6 +18,9 @@
     this.hourlyCost = 0.0,
     this.notes,
   });
+
+  String? get driverName => operatorName;
+  double get hourlyRate => hourlyCost;
 
   String get statusLabel {
     switch (status.toLowerCase()) {

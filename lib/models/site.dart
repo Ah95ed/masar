@@ -28,6 +28,7 @@ class Site {
   });
 
   bool get isActive => status.toLowerCase() == 'active';
+  String? get managerName => null;
   bool get isCancelled => status.toLowerCase() == 'cancelled';
 
   String get statusLabel {

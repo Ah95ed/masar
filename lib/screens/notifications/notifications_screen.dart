@@ -1,12 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../core/constants.dart';
 import '../../core/theme.dart';
 import '../../models/notification.dart';
 import '../../providers/notifications_provider.dart';
 import '../../services/admin_api.dart';
-import '../../widgets/empty_state.dart';
-import '../../widgets/error_state.dart';
-import '../../widgets/loading_state.dart';
+import '../../widgets/auto_refresh_wrapper.dart';
+
+import '../../widgets/state_view.dart';
+import '../reports/reports_screen.dart';
+import '../reports/report_detail_screen.dart';
+import '../sites/sites_screen.dart';
+import '../tasks/tasks_screen.dart';
+import '../updates/work_updates_screen.dart';
+import '../users/pending_users_screen.dart';
+import '../warehouse/warehouse_items_screen.dart';
+import '../warehouse/warehouse_moves_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
   final AdminApi api;
@@ -37,53 +46,159 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('تم تحديد كافة الإشعارات كمقروءة', style: TextStyle(fontFamily: 'Cairo')),
-        backgroundColor: AppTheme.success,
+        content: Text('تم تعليم جميع الإشعارات كمقروءة', style: TextStyle(fontFamily: 'Cairo')),
+        backgroundColor: kGreen,
       ),
     );
   }
 
+  MaterialPageRoute? _mapLinkToScreen(String link) {
+    if (link.startsWith('admin/reports.php') || link.startsWith('reports.php')) {
+      final uri = Uri.tryParse('https://x/$link');
+      final q = uri?.queryParameters ?? {};
+      final id = int.tryParse(q['id'] ?? '');
+      if (id != null) {
+        return MaterialPageRoute(builder: (_) => ReportDetailScreen(api: widget.api, reportId: id));
+      }
+      return MaterialPageRoute(builder: (_) => ReportsScreen(api: widget.api));
+    }
+    if (link.startsWith('admin/work_updates.php') || link.startsWith('work_updates.php') || link.startsWith('work-updates')) {
+      final uri = Uri.tryParse('https://x/$link');
+      final q = uri?.queryParameters ?? {};
+      return MaterialPageRoute(
+        builder: (_) => WorkUpdatesScreen(
+          api: widget.api,
+          planId: int.tryParse(q['plan'] ?? q['plan_id'] ?? ''),
+        ),
+      );
+    }
+    if (link.startsWith('admin/sites.php') || link.startsWith('sites.php')) {
+      return MaterialPageRoute(builder: (_) => SitesScreen(api: widget.api));
+    }
+    if (link.startsWith('admin/work_plans.php') || link.startsWith('work_plans.php') || link.startsWith('tasks.php')) {
+      return MaterialPageRoute(builder: (_) => TasksScreen(api: widget.api));
+    }
+    if (link.startsWith('admin/pending_users.php') || link.startsWith('pending_users.php')) {
+      return MaterialPageRoute(builder: (_) => PendingUsersScreen(api: widget.api));
+    }
+    if (link.startsWith('admin/warehouse_items.php') || link.startsWith('warehouse_items.php')) {
+      return MaterialPageRoute(builder: (_) => WarehouseItemsScreen(api: widget.api));
+    }
+    if (link.startsWith('admin/warehouse_moves.php') || link.startsWith('warehouse_moves.php')) {
+      return MaterialPageRoute(builder: (_) => WarehouseMovesScreen(api: widget.api));
+    }
+    if (link.startsWith('engineer/dashboard.php')) {
+      return MaterialPageRoute(builder: (_) => ReportsScreen(api: widget.api));
+    }
+    if (link.startsWith('engineer/tasks.php')) {
+      return MaterialPageRoute(builder: (_) => TasksScreen(api: widget.api));
+    }
+    return null;
+  }
+
+  Future<void> _handleNotificationTap(NotificationItem item) async {
+    if (!item.read) {
+      await _markRead(item);
+    }
+    final link = item.link;
+    if (link != null && link.isNotEmpty) {
+      final route = _mapLinkToScreen(link);
+      if (route != null && mounted) {
+        Navigator.push(context, route);
+      }
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final prov = context.watch<NotificationsProvider>();
     final notifications = prov.notifications;
+    final isWide = MediaQuery.of(context).size.width >= 750;
 
-    return Scaffold(
-      drawer: widget.drawer,
-      appBar: AppBar(
-        title: const Text('الإشعارات والتنبيهات'),
-        actions: [
-          if (notifications.any((n) => !n.read))
-            IconButton(
-              icon: const Icon(Icons.done_all_rounded),
-              tooltip: 'تحديد الكل كمقروء',
-              onPressed: _markAllRead,
-            ),
-        ],
-      ),
-      body: prov.isLoading && notifications.isEmpty
-          ? const LoadingState(message: 'جاري تحميل الإشعارات...')
-          : prov.error != null && notifications.isEmpty
-              ? ErrorState(message: prov.error!, onRetry: () => prov.fetchNotifications())
-              : RefreshIndicator(
-                  onRefresh: () => prov.fetchNotifications(),
-                  color: AppTheme.primaryTeal,
-                  child: notifications.isEmpty
-                      ? const EmptyState(
-                          title: 'لا توجد إشعارات',
-                          message: 'لم يتم استلام أي تنبيهات جديدة حتى الآن',
-                          icon: Icons.notifications_none_rounded,
-                        )
-                      : ListView.separated(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          itemCount: notifications.length,
-                          separatorBuilder: (_, __) => const SizedBox(height: 8),
-                          itemBuilder: (context, index) {
-                            final item = notifications[index];
-                            return _buildNotificationCard(item);
-                          },
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 10),
+      onRefresh: () => prov.fetchNotifications(),
+      child: Scaffold(
+        drawer: widget.drawer,
+        appBar: AppBar(
+          title: const Text('الإشعارات والتنبيهات'),
+          actions: [
+            if (notifications.any((n) => !n.read))
+              IconButton(
+                icon: const Icon(Icons.done_all_rounded),
+                tooltip: 'تعليم الكل كمقروء',
+                onPressed: _markAllRead,
+              ),
+          ],
+        ),
+        body: StateView(
+          loading: prov.isLoading && notifications.isEmpty,
+          error: prov.error,
+          empty: notifications.isEmpty,
+          emptyMessage: 'لا توجد تنبيهات جديدة حتى الآن',
+          onRetry: () => prov.fetchNotifications(),
+          child: RefreshIndicator(
+            onRefresh: () => prov.fetchNotifications(),
+            color: kCyan,
+            child: ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: kLine),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'مركز التنبيهات الإدارية',
+                            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: kInk),
+                          ),
+                          Text(
+                            '${prov.unreadCount} إشعار غير مقروء · تحديث فوري كل 10 ثوان',
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kMuted),
+                          ),
+                        ],
+                      ),
+                      if (prov.unreadCount > 0)
+                        FilledButton.tonalIcon(
+                          onPressed: _markAllRead,
+                          icon: const Icon(Icons.done_all_rounded, size: 16),
+                          label: const Text('تعليم كمقروء', style: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
                         ),
+                    ],
+                  ),
                 ),
+                const SizedBox(height: 14),
+
+                if (isWide)
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 520,
+                      mainAxisExtent: 145,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
+                    ),
+                    itemCount: notifications.length,
+                    itemBuilder: (context, index) => _buildNotificationCard(notifications[index]),
+                  )
+                else
+                  ...notifications.map((n) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _buildNotificationCard(n),
+                  )),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -92,88 +207,109 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Card(
       elevation: 0,
-      color: isUnread ? Colors.teal.shade50.withOpacity(0.4) : Colors.white,
+      color: isUnread ? kCyanPale.withOpacity(0.35) : Colors.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         side: BorderSide(
-          color: isUnread ? AppTheme.primaryTeal.withOpacity(0.4) : AppTheme.border,
+          color: isUnread ? kCyan.withOpacity(0.5) : kLine,
           width: isUnread ? 1.5 : 1,
         ),
       ),
-      child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-        leading: CircleAvatar(
-          backgroundColor: isUnread ? AppTheme.primaryTeal.withOpacity(0.15) : Colors.grey.shade100,
-          child: Icon(
-            _getNotificationIcon(item.type),
-            color: isUnread ? AppTheme.primaryTeal : AppTheme.textMuted,
-            size: 20,
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                item.title,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
-                  fontSize: 14,
-                  color: AppTheme.textPrimary,
-                ),
+      child: InkWell(
+        onTap: () => _handleNotificationTap(item),
+        borderRadius: BorderRadius.circular(10),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: _getNotificationColor(item.type).withOpacity(0.15),
+                    child: Icon(_getNotificationIcon(item.type), color: _getNotificationColor(item.type), size: 15),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.title + (isUnread ? ' · جديد' : ''),
+                      style: TextStyle(
+                        fontFamily: 'Cairo',
+                        fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                        fontSize: 13,
+                        color: isUnread ? kInk : AppTheme.textPrimary,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  if (item.createdAt != null)
+                    Text(item.createdAt!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: kMuted)),
+                ],
               ),
-            ),
-            if (isUnread)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppTheme.primaryTeal,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text(
-              item.message,
-              style: const TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 12,
-                color: AppTheme.textSecondary,
-              ),
-            ),
-            if (item.createdAt != null) ...[
               const SizedBox(height: 6),
               Text(
-                item.createdAt!,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 11,
-                  color: AppTheme.textMuted,
-                ),
+                item.message,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
+              ),
+              const Spacer(),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (isUnread)
+                    TextButton.icon(
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                      icon: const Icon(Icons.check_rounded, size: 14, color: kGreen),
+                      label: const Text('تمت القراءة', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kGreen)),
+                      onPressed: () => _markRead(item),
+                    ),
+                  if (item.link != null && item.link!.isNotEmpty) ...[
+                    const SizedBox(width: 6),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                      icon: const Icon(Icons.open_in_new_rounded, size: 14, color: kCyan),
+                      label: const Text('فتح', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kCyan, fontWeight: FontWeight.bold)),
+                      onPressed: () => _handleNotificationTap(item),
+                    ),
+                  ],
+                ],
               ),
             ],
-          ],
+          ),
         ),
-        onTap: () => _markRead(item),
       ),
     );
   }
 
+  Color _getNotificationColor(String? type) {
+    switch (type) {
+      case 'report_submitted':
+      case 'report_pending':
+        return kAmber;
+      case 'urgent_task':
+      case 'alert':
+        return kRed;
+      case 'warehouse_signed':
+      case 'success':
+        return kGreen;
+      default:
+        return kCyan;
+    }
+  }
+
   IconData _getNotificationIcon(String? type) {
     switch (type) {
-      case 'warning':
-        return Icons.warning_amber_rounded;
-      case 'success':
-        return Icons.check_circle_outline_rounded;
-      case 'danger':
-        return Icons.error_outline_rounded;
+      case 'report_submitted':
+      case 'report_pending':
+        return Icons.assignment_outlined;
+      case 'urgent_task':
+        return Icons.notification_important_rounded;
+      case 'warehouse_signed':
+        return Icons.verified_outlined;
       default:
-        return Icons.notifications_outlined;
+        return Icons.notifications_active_rounded;
     }
   }
 }

@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import '../../widgets/auto_refresh_wrapper.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/warehouse_item.dart';
@@ -77,7 +78,10 @@ class _WarehouseItemsScreenState extends State<WarehouseItemsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 30),
+      onRefresh: _load,
+      child: Scaffold(
       appBar: AppBar(
         title: const Text('المخزن والمستودع الرئيسي'),
         // ⚠️ لا يوجد زر Refresh في الـ AppBar
@@ -111,6 +115,7 @@ class _WarehouseItemsScreenState extends State<WarehouseItemsScreen> {
                     ],
                   ),
                 ),
+      ),
     );
   }
 

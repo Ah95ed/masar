@@ -1,3 +1,4 @@
+import '../../widgets/auto_refresh_wrapper.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme.dart';
@@ -53,7 +54,10 @@ class _WarehouseMovesScreenState extends State<WarehouseMovesScreen> {
     final whProv = context.watch<WarehouseProvider>();
     final moves = whProv.filteredMoves;
 
-    return Scaffold(
+    return AutoRefreshWrapper(
+      interval: const Duration(seconds: 30),
+      onRefresh: () => whProv.fetchMoves(),
+      child: Scaffold(
       drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('توقيع حركات المخزن والمستودع'),
@@ -87,6 +91,7 @@ class _WarehouseMovesScreenState extends State<WarehouseMovesScreen> {
                     ],
                   ),
                 ),
+      ),
     );
   }
 
@@ -131,7 +136,7 @@ class _WarehouseMovesScreenState extends State<WarehouseMovesScreen> {
     );
   }
 
-  Widget _buildMoveTile(WarehouseMove move) {
+  Widget _buildMoveTile(WarehouseMove move, {bool isGrid = false}) {
     final isSigned = move.isSigned;
 
     return Card(
@@ -144,7 +149,7 @@ class _WarehouseMovesScreenState extends State<WarehouseMovesScreen> {
           width: isSigned ? 1 : 1.5,
         ),
       ),
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: isGrid ? EdgeInsets.zero : const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
