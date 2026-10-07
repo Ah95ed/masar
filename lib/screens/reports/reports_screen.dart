@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/api_exception.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../models/report.dart';
+import '../../providers/reports_provider.dart';
 import '../../services/admin_api.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
@@ -19,44 +20,12 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  List<Report> _reports = [];
-  bool _loading = true;
-  String? _error;
-  String _filterStatus = 'all';
-
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  // ✅ القاعدة الذهبية: جلب البيانات دائماً من السيرفر
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<ReportsProvider>().fetchReports();
     });
-
-    try {
-      final res = await widget.api.get('reports');
-      if (!mounted) return;
-      setState(() {
-        _reports = (res as List).map((e) => Report.fromJson(e)).toList();
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'حدث خطأ أثناء تحميل التقارير';
-        _loading = false;
-      });
-    }
   }
 
   Future<void> _openDetail(Report report) async {
@@ -67,55 +36,44 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     );
 
-    // ✅ إعادة التحميل التلقائي بعد اعتماد أو رفض التقرير
-    if (reviewed == true) {
-      await _load();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم تحديث حالة التقرير بنجاح', style: TextStyle(fontFamily: 'Cairo')),
-          backgroundColor: AppTheme.success,
-        ),
-      );
+    if (reviewed == true && mounted) {
+      await context.read<ReportsProvider>().fetchReports();
     }
-  }
-
-  List<Report> get _filteredReports {
-    if (_filterStatus == 'all') return _reports;
-    return _reports.where((r) => r.status == _filterStatus).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final reportsProv = context.watch<ReportsProvider>();
+    final reports = reportsProv.filteredReports;
+
     return Scaffold(
       drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('التقارير اليومية الميدانية'),
-        // ⚠️ لا يوجد زر Refresh في الـ AppBar
       ),
-      body: _loading
+      body: reportsProv.isLoading && reportsProv.reports.isEmpty
           ? const LoadingState(message: 'جاري تحميل التقارير اليومية...')
-          : _error != null
-              ? ErrorState(message: _error!, onRetry: _load)
+          : reportsProv.error != null && reportsProv.reports.isEmpty
+              ? ErrorState(message: reportsProv.error!, onRetry: () => reportsProv.fetchReports())
               : RefreshIndicator(
-                  onRefresh: _load,
+                  onRefresh: () => reportsProv.fetchReports(),
                   color: AppTheme.primaryTeal,
                   child: Column(
                     children: [
-                      _buildFiltersHeader(),
+                      _buildFilterBar(reportsProv),
                       Expanded(
-                        child: _filteredReports.isEmpty
+                        child: reports.isEmpty
                             ? const EmptyState(
-                                title: 'لا توجد تقارير مطابقة',
-                                message: 'لم يتم العثور على أي تقارير بالحالة المحددة',
+                                title: 'لا توجد تقارير',
+                                message: 'لم يتم العثور على أي تقارير تطابق الفلتر المحدد',
                                 icon: Icons.description_outlined,
                               )
                             : ListView.builder(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                itemCount: _filteredReports.length,
+                                itemCount: reports.length,
                                 itemBuilder: (context, index) {
-                                  final report = _filteredReports[index];
-                                  return _buildReportCard(report);
+                                  final report = reports[index];
+                                  return _buildReportTile(report);
                                 },
                               ),
                       ),
@@ -125,65 +83,63 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildFiltersHeader() {
+  Widget _buildFilterBar(ReportsProvider prov) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       color: Colors.white,
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         child: Row(
           children: [
-            _buildStatusChip('all', 'الكل ()'),
-            _buildStatusChip('submitted', 'بانتظار الاعتماد'),
-            _buildStatusChip('approved', 'معتمدة'),
-            _buildStatusChip('rejected', 'مرفوضة'),
+            _buildFilterChip('all', 'الكل (${prov.reports.length})', prov),
+            _buildFilterChip('submitted', 'بانتظار المراجعة (${prov.pendingCount})', prov),
+            _buildFilterChip('approved', 'المعتمدة (${prov.approvedCount})', prov),
+            _buildFilterChip('rejected', 'المرفوضة (${prov.rejectedCount})', prov),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatusChip(String status, String label) {
-    final isSelected = _filterStatus == status;
+  Widget _buildFilterChip(String status, String label, ReportsProvider prov) {
+    final isSelected = prov.filterStatus == status;
     return Padding(
-      padding: const EdgeInsets.only(left: 6),
-      child: ChoiceChip(
-        label: Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12)),
-        selected: isSelected,
-        selectedColor: AppTheme.primaryDark,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.white : AppTheme.textSecondary,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      padding: const EdgeInsets.only(left: 8),
+      child: FilterChip(
+        label: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : AppTheme.textPrimary,
+          ),
         ),
-        onSelected: (_) => setState(() => _filterStatus = status),
+        selected: isSelected,
+        onSelected: (_) => prov.setFilter(status),
+        selectedColor: AppTheme.primaryDark,
+        backgroundColor: Colors.grey.shade100,
+        checkmarkColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
       ),
     );
   }
 
-  Widget _buildReportCard(Report report) {
-    Color statusBg = AppTheme.border;
-    Color statusFg = AppTheme.textSecondary;
-    String statusLabel = report.status;
-
-    if (report.status == 'approved') {
-      statusBg = AppTheme.successLight;
-      statusFg = AppTheme.success;
-      statusLabel = 'معتمد';
-    } else if (report.status == 'rejected') {
-      statusBg = AppTheme.dangerLight;
-      statusFg = AppTheme.danger;
-      statusLabel = 'مرفوض';
-    } else if (report.status == 'submitted') {
-      statusBg = AppTheme.warningLight;
-      statusFg = AppTheme.warning;
-      statusLabel = 'بانتظار الاعتماد';
-    }
+  Widget _buildReportTile(Report report) {
+    final hasExpenses = report.expenses.isNotEmpty;
+    final hasReceipts = report.receipts.isNotEmpty;
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppTheme.border),
+      ),
+      margin: const EdgeInsets.only(bottom: 8),
+      child: InkWell(
         onTap: () => _openDetail(report),
+        borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Column(
@@ -193,28 +149,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 children: [
                   Expanded(
                     child: Text(
-                      report.siteName ?? 'الموقع #',
+                      report.siteName ?? 'الموقع #${report.siteId}',
                       style: const TextStyle(
                         fontFamily: 'Cairo',
-                        fontSize: 15,
                         fontWeight: FontWeight.bold,
+                        fontSize: 14,
                         color: AppTheme.textPrimary,
                       ),
                     ),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                     decoration: BoxDecoration(
-                      color: statusBg,
-                      borderRadius: BorderRadius.circular(20),
+                      color: _getStatusColor(report.status).withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
-                      statusLabel,
+                      report.statusLabel,
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
-                        color: statusFg,
+                        color: _getStatusColor(report.status),
                       ),
                     ),
                   ),
@@ -226,50 +182,75 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   const Icon(Icons.person_outline, size: 14, color: AppTheme.textMuted),
                   const SizedBox(width: 4),
                   Text(
-                    report.engineerName ?? 'مهندس الموقع',
+                    report.engineerName ?? 'المهندس #${report.engineerId}',
                     style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
                   ),
-                  const SizedBox(width: 14),
-                  const Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.textMuted),
+                  const Spacer(),
+                  const Icon(Icons.calendar_today_outlined, size: 13, color: AppTheme.textMuted),
                   const SizedBox(width: 4),
                   Text(
                     report.reportDate,
-                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppTheme.textMuted),
                   ),
                 ],
               ),
-              if (report.workDone.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Text(
-                  report.workDone,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
-                ),
-              ],
+              const SizedBox(height: 8),
+              Text(
+                report.workDone,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
               const SizedBox(height: 10),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'الإنجاز: %',
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.accentCyan,
-                    ),
-                  ),
-                  const Row(
-                    children: [
-                      Text(
-                        'مراجعة التفاصيل',
-                        style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppTheme.primaryTeal),
+                  if (hasExpenses) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(4),
                       ),
-                      SizedBox(width: 4),
-                      Icon(Icons.arrow_forward_ios, size: 11, color: AppTheme.primaryTeal),
-                    ],
+                      child: Row(
+                        children: [
+                          Icon(Icons.receipt_long, size: 12, color: Colors.blue.shade700),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${report.expenses.length} مصروف',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 10, color: Colors.blue.shade800),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  if (hasReceipts) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.purple.shade50,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.attach_file, size: 12, color: Colors.purple.shade700),
+                          const SizedBox(width: 3),
+                          Text(
+                            '${report.receipts.length} مرفق',
+                            style: TextStyle(fontFamily: 'Cairo', fontSize: 10, color: Colors.purple.shade800),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                  ],
+                  const Spacer(),
+                  Text(
+                    'نسبة الإنجاز: ${report.progressPercent}%',
+                    style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryTeal),
                   ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_left, size: 18, color: AppTheme.textMuted),
                 ],
               ),
             ],
@@ -277,5 +258,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return AppTheme.success;
+      case 'rejected':
+        return AppTheme.danger;
+      case 'submitted':
+      case 'pending':
+      default:
+        return AppTheme.warning;
+    }
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../core/api_exception.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme.dart';
+import '../../providers/dashboard_provider.dart';
 import '../../services/admin_api.dart';
 import '../../services/session_manager.dart';
 import '../../widgets/stat_card.dart';
@@ -24,61 +25,31 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Map<String, dynamic>? _data;
-  bool _loading = true;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<DashboardProvider>().fetchDashboard();
     });
-
-    try {
-      final res = await widget.api.get('dashboard');
-      if (!mounted) return;
-      setState(() {
-        _data = res is Map<String, dynamic> ? res : Map<String, dynamic>.from(res as Map);
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'حدث خطأ أثناء تحميل لوحة التحكم';
-        _loading = false;
-      });
-    }
   }
 
   @override
   Widget build(BuildContext context) {
     final user = SessionManager.instance.user;
     final fullName = user?['full_name']?.toString() ?? 'المدير العام';
+    final dashProv = context.watch<DashboardProvider>();
 
     return Scaffold(
       drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('لوحة التحكم'),
-        // ⚠️ لا يوجد زر Refresh في الـ AppBar حسب التعليمات الصارمة
       ),
-      body: _loading
+      body: dashProv.isLoading && dashProv.data == null
           ? const LoadingState(message: 'جاري تحميل مؤشرات الأداء...')
-          : _error != null
-              ? ErrorState(message: _error!, onRetry: _load)
+          : dashProv.error != null && dashProv.data == null
+              ? ErrorState(message: dashProv.error!, onRetry: () => dashProv.fetchDashboard())
               : RefreshIndicator(
-                  onRefresh: _load,
+                  onRefresh: () => dashProv.fetchDashboard(),
                   color: AppTheme.primaryTeal,
                   child: ListView(
                     padding: const EdgeInsets.all(16),
@@ -154,28 +125,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      _buildStatsGrid(),
+                      _buildStatsGrid(dashProv),
 
                       const SizedBox(height: 24),
 
                       // أفضل المهندسين أداءً
-                      _buildTopEngineersSection(),
+                      _buildTopEngineersSection(dashProv),
                     ],
                   ),
                 ),
     );
   }
 
-  Widget _buildStatsGrid() {
-    final stats = _data?['stats'] as Map<String, dynamic>? ?? {};
-
-    final totalSites = stats['total_sites']?.toString() ?? '0';
-    final activeSites = stats['active_sites']?.toString() ?? '0';
-    final pendingReports = stats['pending_reports']?.toString() ?? '0';
-    final activeTasks = stats['active_tasks']?.toString() ?? '0';
-    final totalMachinery = stats['total_machinery']?.toString() ?? '0';
-    final lowStockItems = stats['low_stock_items']?.toString() ?? '0';
-
+  Widget _buildStatsGrid(DashboardProvider prov) {
     return GridView.count(
       crossAxisCount: 2,
       crossAxisSpacing: 12,
@@ -186,41 +148,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
       children: [
         StatCard(
           title: 'المواقع النشطة',
-          value: '$activeSites / $totalSites',
+          value: '${prov.activeSites} / ${prov.totalSites}',
           icon: Icons.location_city_rounded,
           accentColor: AppTheme.accentCyan,
           onTap: () => widget.onNavigateTab?.call(1),
         ),
         StatCard(
           title: 'تقارير بالانتظار',
-          value: pendingReports,
+          value: prov.pendingReports,
           icon: Icons.assignment_late_outlined,
           accentColor: AppTheme.warning,
-          onTap: () => widget.onNavigateTab?.call(2),
+          onTap: () => widget.onNavigateTab?.call(3),
         ),
         StatCard(
           title: 'المهام الجارية',
-          value: activeTasks,
+          value: prov.activeTasks,
           icon: Icons.task_alt_rounded,
           accentColor: AppTheme.success,
-          onTap: () => widget.onNavigateTab?.call(1),
+          onTap: () => widget.onNavigateTab?.call(2),
         ),
         StatCard(
           title: 'الآليات والمعدات',
-          value: totalMachinery,
+          value: prov.totalMachinery,
           icon: Icons.precision_manufacturing_rounded,
           accentColor: AppTheme.primaryDark,
         ),
         StatCard(
           title: 'مواد دون الحد الأدنى',
-          value: lowStockItems,
+          value: prov.lowStockItems,
           icon: Icons.inventory_2_outlined,
           accentColor: AppTheme.danger,
-          onTap: () => widget.onNavigateTab?.call(3),
+          onTap: () => widget.onNavigateTab?.call(4),
         ),
         StatCard(
           title: 'مجموع المواقع',
-          value: totalSites,
+          value: prov.totalSites,
           icon: Icons.business_rounded,
           accentColor: AppTheme.primaryTeal,
           onTap: () => widget.onNavigateTab?.call(1),
@@ -229,8 +191,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildTopEngineersSection() {
-    final list = _data?['top_engineers'] as List? ?? [];
+  Widget _buildTopEngineersSection(DashboardProvider prov) {
+    final list = prov.topEngineers;
 
     if (list.isEmpty) {
       return const SizedBox.shrink();
@@ -251,29 +213,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
         const SizedBox(height: 12),
         Card(
           elevation: 0,
+          color: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
             side: const BorderSide(color: AppTheme.border),
           ),
           child: ListView.separated(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            itemCount: list.length,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            itemCount: list.length,
             separatorBuilder: (_, __) => const Divider(height: 1, color: AppTheme.border),
             itemBuilder: (context, index) {
               final eng = list[index] as Map<String, dynamic>;
-              final name = eng['engineer_name']?.toString() ?? 'مهندس';
+              final name = eng['engineer_name'] ?? eng['full_name'] ?? 'مهندس';
               final count = eng['reports_count']?.toString() ?? '0';
 
               return ListTile(
                 leading: CircleAvatar(
                   backgroundColor: AppTheme.primaryTeal.withOpacity(0.12),
                   child: Text(
-                    name.isNotEmpty ? name[0] : 'م',
+                    '${index + 1}',
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryDark,
+                      color: AppTheme.primaryTeal,
                     ),
                   ),
                 ),
@@ -281,22 +245,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   name,
                   style: const TextStyle(
                     fontFamily: 'Cairo',
+                    fontWeight: FontWeight.bold,
                     fontSize: 14,
-                    fontWeight: FontWeight.w600,
                   ),
                 ),
-                subtitle: Text(
-                  'عدد التقارير المعتمدة: $count',
-                  style: const TextStyle(
-                    fontFamily: 'Cairo',
-                    fontSize: 12,
-                    color: AppTheme.textSecondary,
+                trailing: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryDark.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(20),
                   ),
-                ),
-                trailing: const Icon(
-                  Icons.star_rounded,
-                  color: AppTheme.warning,
-                  size: 22,
+                  child: Text(
+                    '$count تقرير',
+                    style: const TextStyle(
+                      fontFamily: 'Cairo',
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryDark,
+                    ),
+                  ),
                 ),
               );
             },

@@ -1,4 +1,4 @@
-﻿class NotificationItem {
+class NotificationItem {
   final int id;
   final String title;
   final String message;
@@ -19,15 +19,29 @@
 
   bool get read => isRead == 1;
 
-  factory NotificationItem.fromJson(Map<String, dynamic> json) => NotificationItem(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    title: json['title']?.toString() ?? '',
-    message: json['message']?.toString() ?? '',
-    type: json['type']?.toString(),
-    link: json['link']?.toString(),
-    isRead: (json['is_read'] as num?)?.toInt() ?? 0,
-    createdAt: json['created_at']?.toString(),
-  );
+  factory NotificationItem.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? 0;
+    }
+
+    int parseRead(dynamic v) {
+      if (v == null) return 0;
+      if (v == true || v == 1 || v == '1') return 1;
+      return 0;
+    }
+
+    return NotificationItem(
+      id: parseInt(json['id']),
+      title: json['title']?.toString() ?? '',
+      message: json['message']?.toString() ?? '',
+      type: json['type']?.toString(),
+      link: json['link']?.toString(),
+      isRead: parseRead(json['is_read']),
+      createdAt: json['created_at']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

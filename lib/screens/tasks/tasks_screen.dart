@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/api_exception.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../models/task.dart';
+import '../../providers/tasks_provider.dart';
 import '../../services/admin_api.dart';
 import '../../widgets/confirm_dialog.dart';
 import '../../widgets/empty_state.dart';
@@ -20,45 +21,12 @@ class TasksScreen extends StatefulWidget {
 }
 
 class _TasksScreenState extends State<TasksScreen> {
-  List<Task> _tasks = [];
-  bool _loading = true;
-  String? _error;
-  String _filterStatus = 'all';
-  String _searchQuery = '';
-
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  // ✅ القاعدة الذهبية: جلب البيانات دائماً من السيرفر
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TasksProvider>().fetchTasks();
     });
-
-    try {
-      final res = await widget.api.get('tasks');
-      if (!mounted) return;
-      setState(() {
-        _tasks = (res as List).map((e) => Task.fromJson(e)).toList();
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'حدث خطأ أثناء تحميل خطط العمل';
-        _loading = false;
-      });
-    }
   }
 
   Future<void> _openForm({Task? item}) async {
@@ -69,14 +37,13 @@ class _TasksScreenState extends State<TasksScreen> {
       ),
     );
 
-    // ✅ إذا عاد النموذج بنجاح نعيد الجلب من السيرفر
-    if (saved == true) {
-      await _load();
+    if (saved == true && mounted) {
+      await context.read<TasksProvider>().fetchTasks();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            item == null ? 'تم إصدار خطة العمل بنجاح' : 'تم تحديث خطة العمل بنجاح',
+            item == null ? 'تم إنشاء خطة العمل بنجاح' : 'تم تحديث خطة العمل بنجاح',
             style: const TextStyle(fontFamily: 'Cairo'),
           ),
           backgroundColor: AppTheme.success,
@@ -89,54 +56,35 @@ class _TasksScreenState extends State<TasksScreen> {
     final confirmed = await ConfirmDialog.show(
       context,
       title: 'إلغاء خطة العمل',
-      message: 'هل أنت متأكد من إلغاء خطة العمل "${task.title}"؟',
+      message: 'هل أنت متأكد من رغبتك في إلغاء خطة العمل "${task.title}"؟',
       confirmText: 'إلغاء الخطة',
       isDestructive: true,
     );
 
-    if (!confirmed) return;
+    if (!confirmed || !mounted) return;
 
-    try {
-      await widget.api.post('work-plan-cancel', {'task_id': task.id});
-      if (!mounted) return;
-      // ✅ إعادة جلب البيانات فوراً بعد استجابة السيرفر
-      await _load();
-      if (!mounted) return;
+    final success = await context.read<TasksProvider>().cancelTask(task.id);
+    if (!mounted) return;
+
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم إلغاء خطة العمل بنجاح', style: TextStyle(fontFamily: 'Cairo')),
           backgroundColor: AppTheme.success,
         ),
       );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message, style: const TextStyle(fontFamily: 'Cairo')),
-          backgroundColor: AppTheme.danger,
-        ),
-      );
     }
-  }
-
-  List<Task> get _filteredTasks {
-    return _tasks.where((t) {
-      final matchesStatus = _filterStatus == 'all' || t.status == _filterStatus;
-      final matchesSearch = _searchQuery.isEmpty ||
-          t.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          (t.siteName?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false) ||
-          (t.description?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
-      return matchesStatus && matchesSearch;
-    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final tasksProv = context.watch<TasksProvider>();
+    final tasks = tasksProv.filteredTasks;
+
     return Scaffold(
       drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('خطط العمل والتوجيهات'),
-        // ⚠️ لا يوجد زر Refresh في الـ AppBar
         actions: [
           IconButton(
             icon: const Icon(Icons.add_task_rounded),
@@ -145,29 +93,29 @@ class _TasksScreenState extends State<TasksScreen> {
           ),
         ],
       ),
-      body: _loading
+      body: tasksProv.isLoading && tasksProv.tasks.isEmpty
           ? const LoadingState(message: 'جاري تحميل خطط العمل...')
-          : _error != null
-              ? ErrorState(message: _error!, onRetry: _load)
+          : tasksProv.error != null && tasksProv.tasks.isEmpty
+              ? ErrorState(message: tasksProv.error!, onRetry: () => tasksProv.fetchTasks())
               : RefreshIndicator(
-                  onRefresh: _load,
+                  onRefresh: () => tasksProv.fetchTasks(),
                   color: AppTheme.primaryTeal,
                   child: Column(
                     children: [
-                      _buildFiltersHeader(),
+                      _buildFiltersHeader(tasksProv),
                       Expanded(
-                        child: _filteredTasks.isEmpty
+                        child: tasks.isEmpty
                             ? const EmptyState(
-                                title: 'لا توجد مهام مطابقة',
-                                message: 'قم بإضافة خطة عمل جديدة للموقع',
-                                icon: Icons.assignment_late_outlined,
+                                title: 'لا توجد خطط عمل',
+                                message: 'لم يتم العثور على أي مهام تطابق معايير البحث',
+                                icon: Icons.assignment_outlined,
                               )
                             : ListView.builder(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                itemCount: _filteredTasks.length,
+                                itemCount: tasks.length,
                                 itemBuilder: (context, index) {
-                                  final task = _filteredTasks[index];
-                                  return _buildTaskCard(task);
+                                  final task = tasks[index];
+                                  return _buildTaskTile(task);
                                 },
                               ),
                       ),
@@ -182,24 +130,18 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildFiltersHeader() {
+  Widget _buildFiltersHeader(TasksProvider prov) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
       color: Colors.white,
       child: Column(
         children: [
           TextField(
-            onChanged: (v) => setState(() => _searchQuery = v.trim()),
-            decoration: InputDecoration(
-              hintText: 'بحث في عنوان المهمة أو اسم الموقع...',
-              prefixIcon: const Icon(Icons.search, size: 20),
-              suffixIcon: _searchQuery.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear, size: 18),
-                      onPressed: () => setState(() => _searchQuery = ''),
-                    )
-                  : null,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            onChanged: (v) => prov.setSearch(v),
+            decoration: const InputDecoration(
+              hintText: 'بحث بعنوان المهمة، الموقع، المهندس...',
+              prefixIcon: Icon(Icons.search, size: 20),
+              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             ),
           ),
           const SizedBox(height: 8),
@@ -207,11 +149,12 @@ class _TasksScreenState extends State<TasksScreen> {
             scrollDirection: Axis.horizontal,
             child: Row(
               children: [
-                _buildStatusChip('all', 'الكل (${_tasks.length})'),
-                _buildStatusChip('pending', 'قيد الانتظار'),
-                _buildStatusChip('in_progress', 'جارية'),
-                _buildStatusChip('completed', 'مكتملة'),
-                _buildStatusChip('cancelled', 'ملغية'),
+                _buildStatusChip('all', 'الكل (${prov.tasks.length})', prov),
+                _buildStatusChip('pending', 'قيد الانتظار', prov),
+                _buildStatusChip('in_progress', 'قيد التنفيذ', prov),
+                _buildStatusChip('review', 'قيد المراجعة', prov),
+                _buildStatusChip('done', 'مكتملة', prov),
+                _buildStatusChip('cancelled', 'ملغاة', prov),
               ],
             ),
           ),
@@ -220,44 +163,41 @@ class _TasksScreenState extends State<TasksScreen> {
     );
   }
 
-  Widget _buildStatusChip(String status, String label) {
-    final isSelected = _filterStatus == status;
+  Widget _buildStatusChip(String status, String label, TasksProvider prov) {
+    final isSelected = prov.filterStatus == status;
     return Padding(
       padding: const EdgeInsets.only(left: 6),
-      child: ChoiceChip(
-        label: Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12)),
-        selected: isSelected,
-        selectedColor: AppTheme.primaryDark,
-        labelStyle: TextStyle(
-          color: isSelected ? Colors.white : AppTheme.textSecondary,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      child: FilterChip(
+        label: Text(
+          label,
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 12,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            color: isSelected ? Colors.white : AppTheme.textPrimary,
+          ),
         ),
-        onSelected: (_) => setState(() => _filterStatus = status),
+        selected: isSelected,
+        onSelected: (_) => prov.setFilter(status),
+        selectedColor: AppTheme.primaryDark,
+        backgroundColor: Colors.grey.shade100,
+        checkmarkColor: Colors.white,
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       ),
     );
   }
 
-  Widget _buildTaskCard(Task task) {
-    Color priorityColor = AppTheme.info;
-    String priorityText = 'عادية';
-
-    switch (task.priority) {
-      case 'urgent':
-        priorityColor = AppTheme.danger;
-        priorityText = 'حرجة وعاجلة';
-        break;
-      case 'high':
-        priorityColor = AppTheme.warning;
-        priorityText = 'عالية الأولوية';
-        break;
-      case 'low':
-        priorityColor = AppTheme.textMuted;
-        priorityText = 'منخفضة';
-        break;
-    }
+  Widget _buildTaskTile(Task task) {
+    final isDone = task.status == 'done' || task.status == 'completed';
 
     return Card(
-      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 0,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: const BorderSide(color: AppTheme.border),
+      ),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Column(
@@ -270,91 +210,47 @@ class _TasksScreenState extends State<TasksScreen> {
                     task.title,
                     style: const TextStyle(
                       fontFamily: 'Cairo',
-                      fontSize: 15,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.textPrimary,
+                      fontSize: 14,
                     ),
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: priorityColor.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(12),
+                    color: _getStatusColor(task.status).withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    priorityText,
+                    task.statusLabel,
                     style: TextStyle(
                       fontFamily: 'Cairo',
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: FontWeight.bold,
-                      color: priorityColor,
+                      color: _getStatusColor(task.status),
                     ),
                   ),
-                ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 20),
-                  onSelected: (v) {
-                    if (v == 'edit') _openForm(item: task);
-                    if (v == 'cancel') _cancelTask(task);
-                  },
-                  itemBuilder: (_) => [
-                    const PopupMenuItem(
-                      value: 'edit',
-                      child: Row(
-                        children: [
-                          Icon(Icons.edit_outlined, size: 18),
-                          SizedBox(width: 8),
-                          Text('تعديل الخطة', style: TextStyle(fontFamily: 'Cairo')),
-                        ],
-                      ),
-                    ),
-                    if (task.status != 'cancelled')
-                      const PopupMenuItem(
-                        value: 'cancel',
-                        child: Row(
-                          children: [
-                            Icon(Icons.cancel_outlined, size: 18, color: AppTheme.danger),
-                            SizedBox(width: 8),
-                            Text('إلغاء الخطة', style: TextStyle(fontFamily: 'Cairo', color: AppTheme.danger)),
-                          ],
-                        ),
-                      ),
-                  ],
                 ),
               ],
             ),
-            if (task.siteName != null && task.siteName!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  const Icon(Icons.business_rounded, size: 14, color: AppTheme.textMuted),
-                  const SizedBox(width: 6),
-                  Text(
-                    task.siteName!,
-                    style: const TextStyle(
-                      fontFamily: 'Cairo',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.accentCyan,
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            if (task.description != null && task.description!.isNotEmpty) ...[
-              const SizedBox(height: 6),
-              Text(
-                task.description!,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 12,
-                  color: AppTheme.textSecondary,
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.textMuted),
+                const SizedBox(width: 4),
+                Text(
+                  task.siteName ?? 'الموقع #${task.siteId}',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
                 ),
-              ),
-            ],
+                const Spacer(),
+                const Icon(Icons.person_outline, size: 14, color: AppTheme.textMuted),
+                const SizedBox(width: 4),
+                Text(
+                  task.assignedToName ?? 'غير محدد',
+                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             Row(
               children: [
@@ -362,12 +258,12 @@ class _TasksScreenState extends State<TasksScreen> {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
-                      value: (task.progress / 100).clamp(0.0, 1.0),
-                      backgroundColor: AppTheme.border,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        task.progress >= 100 ? AppTheme.success : AppTheme.primaryTeal,
-                      ),
+                      value: task.progress / 100.0,
                       minHeight: 6,
+                      backgroundColor: Colors.grey.shade200,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        task.progress == 100 ? AppTheme.success : AppTheme.primaryTeal,
+                      ),
                     ),
                   ),
                 ),
@@ -383,9 +279,44 @@ class _TasksScreenState extends State<TasksScreen> {
                 ),
               ],
             ),
+            if (!isDone) ...[
+              const Divider(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('تعديل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
+                    onPressed: () => _openForm(item: task),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton.icon(
+                    icon: const Icon(Icons.cancel_outlined, size: 16, color: AppTheme.danger),
+                    label: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.danger)),
+                    onPressed: () => _cancelTask(task),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'done':
+      case 'completed':
+        return AppTheme.success;
+      case 'in_progress':
+        return AppTheme.primaryTeal;
+      case 'review':
+        return AppTheme.warning;
+      case 'cancelled':
+        return AppTheme.danger;
+      default:
+        return AppTheme.textSecondary;
+    }
   }
 }

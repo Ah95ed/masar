@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/api_exception.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../models/task.dart';
+import '../../providers/tasks_provider.dart';
 import '../../services/admin_api.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
@@ -18,82 +19,32 @@ class EngineerUpdatesScreen extends StatefulWidget {
 }
 
 class _EngineerUpdatesScreenState extends State<EngineerUpdatesScreen> {
-  List<Task> _tasks = [];
-  bool _loading = true;
-  String? _error;
-  String _selectedStatusFilter = 'all';
-
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<TasksProvider>().fetchTasks();
     });
-
-    try {
-      final res = await widget.api.get('tasks');
-      if (!mounted) return;
-      List rawList = [];
-      if (res is List) {
-        rawList = res;
-      } else if (res is Map) {
-        rawList = res['tasks'] ?? res['data'] ?? res['items'] ?? [];
-      }
-      setState(() {
-        _tasks = rawList
-            .whereType<Map>()
-            .map((e) => Task.fromJson(Map<String, dynamic>.from(e)))
-            .toList();
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'حدث خطأ أثناء تحميل تحديثات المهندسين';
-        _loading = false;
-      });
-    }
-  }
-
-  List<Task> get _filteredTasks {
-    if (_selectedStatusFilter == 'all') return _tasks;
-    return _tasks.where((t) => t.status.toLowerCase() == _selectedStatusFilter).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    final allTasks = _tasks;
-    final inProgressCount = allTasks.where((t) => t.status.toLowerCase() == 'in_progress').length;
-    final doneCount = allTasks.where((t) => t.status.toLowerCase() == 'done' || t.status.toLowerCase() == 'completed').length;
-    final reviewCount = allTasks.where((t) => t.status.toLowerCase() == 'review').length;
-    final avgProgress = allTasks.isEmpty
-        ? 0
-        : (allTasks.fold<int>(0, (acc, t) => acc + t.progress) / allTasks.length).round();
+    final tasksProv = context.watch<TasksProvider>();
+    final allTasks = tasksProv.tasks;
+    final filteredTasks = tasksProv.filteredTasks;
 
     return Scaffold(
       drawer: widget.drawer,
       appBar: AppBar(
         title: const Text('تحديثات المهندسين الميدانية'),
-        // ⚠️ لا يوجد زر Refresh في الـ AppBar
       ),
-      body: _loading
+      body: tasksProv.isLoading && allTasks.isEmpty
           ? const LoadingState(message: 'جاري تحميل سجل تحديثات المهندسين...')
-          : _error != null
-              ? ErrorState(message: _error!, onRetry: _load)
+          : tasksProv.error != null && allTasks.isEmpty
+              ? ErrorState(message: tasksProv.error!, onRetry: () => tasksProv.fetchTasks())
               : RefreshIndicator(
                   color: AppTheme.primaryTeal,
-                  onRefresh: _load,
+                  onRefresh: () => tasksProv.fetchTasks(),
                   child: ListView(
                     padding: const EdgeInsets.all(16),
                     children: [
@@ -103,7 +54,7 @@ class _EngineerUpdatesScreenState extends State<EngineerUpdatesScreen> {
                           Expanded(
                             child: _buildMetricCard(
                               label: 'قيد التنفيذ',
-                              value: '$inProgressCount',
+                              value: '${tasksProv.inProgressCount}',
                               icon: Icons.pending_actions_rounded,
                               accent: AppTheme.primaryTeal,
                               bg: AppTheme.primaryTeal.withOpacity(0.12),
@@ -113,7 +64,7 @@ class _EngineerUpdatesScreenState extends State<EngineerUpdatesScreen> {
                           Expanded(
                             child: _buildMetricCard(
                               label: 'متوسط الإنجاز',
-                              value: '$avgProgress%',
+                              value: '${tasksProv.avgProgress}%',
                               icon: Icons.trending_up_rounded,
                               accent: AppTheme.success,
                               bg: AppTheme.success.withOpacity(0.12),
@@ -123,7 +74,7 @@ class _EngineerUpdatesScreenState extends State<EngineerUpdatesScreen> {
                           Expanded(
                             child: _buildMetricCard(
                               label: 'المكتملة',
-                              value: '$doneCount',
+                              value: '${tasksProv.doneCount}',
                               icon: Icons.task_alt_rounded,
                               accent: const Color(0xFF6366F1),
                               bg: const Color(0xFFEEF2FF),
@@ -138,26 +89,26 @@ class _EngineerUpdatesScreenState extends State<EngineerUpdatesScreen> {
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
-                            _buildFilterChip('all', 'كافة التحديثات (${allTasks.length})'),
+                            _buildFilterChip('all', 'كافة التحديثات (${allTasks.length})', tasksProv),
                             const SizedBox(width: 8),
-                            _buildFilterChip('in_progress', 'قيد التنفيذ ($inProgressCount)'),
+                            _buildFilterChip('in_progress', 'قيد التنفيذ (${tasksProv.inProgressCount})', tasksProv),
                             const SizedBox(width: 8),
-                            _buildFilterChip('review', 'قيد المراجعة ($reviewCount)'),
+                            _buildFilterChip('review', 'قيد المراجعة (${tasksProv.reviewCount})', tasksProv),
                             const SizedBox(width: 8),
-                            _buildFilterChip('done', 'المكتملة ($doneCount)'),
+                            _buildFilterChip('done', 'المكتملة (${tasksProv.doneCount})', tasksProv),
                           ],
                         ),
                       ),
                       const SizedBox(height: 16),
 
-                      if (_filteredTasks.isEmpty)
+                      if (filteredTasks.isEmpty)
                         const EmptyState(
                           title: 'لا توجد تحديثات',
                           message: 'لم يتم العثور على تحديثات مهندسين مطابقة للفلتر المحدد.',
                           icon: Icons.rate_review_outlined,
                         )
                       else
-                        ..._filteredTasks.map((t) => _buildTaskUpdateCard(t)),
+                        ...filteredTasks.map((t) => _buildTaskUpdateCard(t)),
                     ],
                   ),
                 ),
@@ -214,13 +165,13 @@ class _EngineerUpdatesScreenState extends State<EngineerUpdatesScreen> {
     );
   }
 
-  Widget _buildFilterChip(String key, String label) {
-    final isSelected = _selectedStatusFilter == key;
+  Widget _buildFilterChip(String key, String label, TasksProvider prov) {
+    final isSelected = prov.filterStatus == key;
     return ChoiceChip(
       label: Text(label),
       selected: isSelected,
       onSelected: (val) {
-        if (val) setState(() => _selectedStatusFilter = key);
+        if (val) prov.setFilter(key);
       },
       selectedColor: AppTheme.primaryTeal.withOpacity(0.18),
       labelStyle: TextStyle(

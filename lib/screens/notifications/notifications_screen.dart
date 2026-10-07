@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../core/api_exception.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme.dart';
 import '../../models/notification.dart';
+import '../../providers/notifications_provider.dart';
 import '../../services/admin_api.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/error_state.dart';
@@ -18,115 +19,67 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
-  List<NotificationItem> _notifications = [];
-  bool _loading = true;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    _load();
-  }
-
-  // ✅ جلب الإشعارات دائماً من السيرفر
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationsProvider>().fetchNotifications();
     });
-
-    try {
-      final res = await widget.api.get('notifications');
-      if (!mounted) return;
-      setState(() {
-        _notifications = (res as List).map((e) => NotificationItem.fromJson(e)).toList();
-        _loading = false;
-      });
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = e.message;
-        _loading = false;
-      });
-    } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _error = 'حدث خطأ أثناء تحميل الإشعارات';
-        _loading = false;
-      });
-    }
   }
 
-  Future<void> _markAsRead(NotificationItem item) async {
+  Future<void> _markRead(NotificationItem item) async {
     if (item.read) return;
-    try {
-      await widget.api.post('notification-read', {'id': item.id});
-      if (!mounted) return;
-      // ✅ إعادة الجلب التلقائي من السيرفر
-      await _load();
-    } catch (_) {}
+    await context.read<NotificationsProvider>().markRead(item.id);
   }
 
-  Future<void> _markAllAsRead() async {
-    try {
-      await widget.api.post('notification-read-all', {});
-      if (!mounted) return;
-      // ✅ إعادة الجلب التلقائي من السيرفر
-      await _load();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم تعليم جميع الإشعارات كمقروءة', style: TextStyle(fontFamily: 'Cairo')),
-          backgroundColor: AppTheme.success,
-        ),
-      );
-    } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.message, style: const TextStyle(fontFamily: 'Cairo')),
-          backgroundColor: AppTheme.danger,
-        ),
-      );
-    }
+  Future<void> _markAllRead() async {
+    await context.read<NotificationsProvider>().markAllRead();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('تم تحديد كافة الإشعارات كمقروءة', style: TextStyle(fontFamily: 'Cairo')),
+        backgroundColor: AppTheme.success,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final unreadCount = _notifications.where((n) => !n.read).length;
+    final prov = context.watch<NotificationsProvider>();
+    final notifications = prov.notifications;
 
     return Scaffold(
       drawer: widget.drawer,
       appBar: AppBar(
-        title: const Text('مركز الإشعارات والتنبيهات'),
-        // ⚠️ لا يوجد زر Refresh في الـ AppBar
+        title: const Text('الإشعارات والتنبيهات'),
         actions: [
-          if (unreadCount > 0)
+          if (notifications.any((n) => !n.read))
             IconButton(
               icon: const Icon(Icons.done_all_rounded),
-              tooltip: 'تعليم الكل كمقروء',
-              onPressed: _markAllAsRead,
+              tooltip: 'تحديد الكل كمقروء',
+              onPressed: _markAllRead,
             ),
         ],
       ),
-      body: _loading
-          ? const LoadingState(message: 'جاري تحميل التنبيهات...')
-          : _error != null
-              ? ErrorState(message: _error!, onRetry: _load)
+      body: prov.isLoading && notifications.isEmpty
+          ? const LoadingState(message: 'جاري تحميل الإشعارات...')
+          : prov.error != null && notifications.isEmpty
+              ? ErrorState(message: prov.error!, onRetry: () => prov.fetchNotifications())
               : RefreshIndicator(
-                  onRefresh: _load,
+                  onRefresh: () => prov.fetchNotifications(),
                   color: AppTheme.primaryTeal,
-                  child: _notifications.isEmpty
+                  child: notifications.isEmpty
                       ? const EmptyState(
                           title: 'لا توجد إشعارات',
-                          message: 'صندوق التنبيهات فارغ حالياً',
+                          message: 'لم يتم استلام أي تنبيهات جديدة حتى الآن',
                           icon: Icons.notifications_none_rounded,
                         )
-                      : ListView.builder(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          itemCount: _notifications.length,
+                      : ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          itemCount: notifications.length,
+                          separatorBuilder: (_, __) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
-                            final item = _notifications[index];
+                            final item = notifications[index];
                             return _buildNotificationCard(item);
                           },
                         ),
@@ -135,53 +88,92 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   }
 
   Widget _buildNotificationCard(NotificationItem item) {
+    final isUnread = !item.read;
+
     return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      color: item.read ? AppTheme.surface : AppTheme.primaryTeal.withOpacity(0.04),
+      elevation: 0,
+      color: isUnread ? Colors.teal.shade50.withOpacity(0.4) : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: item.read ? AppTheme.border : AppTheme.primaryTeal.withOpacity(0.3),
+          color: isUnread ? AppTheme.primaryTeal.withOpacity(0.4) : AppTheme.border,
+          width: isUnread ? 1.5 : 1,
         ),
       ),
       child: ListTile(
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: CircleAvatar(
-          backgroundColor: item.read ? AppTheme.border : AppTheme.primaryTeal.withOpacity(0.15),
+          backgroundColor: isUnread ? AppTheme.primaryTeal.withOpacity(0.15) : Colors.grey.shade100,
           child: Icon(
-            item.read ? Icons.notifications_none_rounded : Icons.notifications_active_rounded,
-            color: item.read ? AppTheme.textMuted : AppTheme.primaryTeal,
+            _getNotificationIcon(item.type),
+            color: isUnread ? AppTheme.primaryTeal : AppTheme.textMuted,
             size: 20,
           ),
         ),
-        title: Text(
-          item.title,
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 14,
-            fontWeight: item.read ? FontWeight.normal : FontWeight.bold,
-            color: AppTheme.textPrimary,
-          ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                item.title,
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                  fontSize: 14,
+                  color: AppTheme.textPrimary,
+                ),
+              ),
+            ),
+            if (isUnread)
+              Container(
+                width: 8,
+                height: 8,
+                decoration: const BoxDecoration(
+                  color: AppTheme.primaryTeal,
+                  shape: BoxShape.circle,
+                ),
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const SizedBox(height: 2),
+            const SizedBox(height: 4),
             Text(
               item.message,
-              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
+              style: const TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 12,
+                color: AppTheme.textSecondary,
+              ),
             ),
-            if (item.createdAt != null && item.createdAt!.isNotEmpty) ...[
-              const SizedBox(height: 4),
+            if (item.createdAt != null) ...[
+              const SizedBox(height: 6),
               Text(
                 item.createdAt!,
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: AppTheme.textMuted),
+                style: const TextStyle(
+                  fontFamily: 'Cairo',
+                  fontSize: 11,
+                  color: AppTheme.textMuted,
+                ),
               ),
             ],
           ],
         ),
-        onTap: () => _markAsRead(item),
+        onTap: () => _markRead(item),
       ),
     );
+  }
+
+  IconData _getNotificationIcon(String? type) {
+    switch (type) {
+      case 'warning':
+        return Icons.warning_amber_rounded;
+      case 'success':
+        return Icons.check_circle_outline_rounded;
+      case 'danger':
+        return Icons.error_outline_rounded;
+      default:
+        return Icons.notifications_outlined;
+    }
   }
 }

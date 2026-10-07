@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../core/constants.dart';
+import '../providers/notifications_provider.dart';
 import '../services/admin_api.dart';
 import '../services/session_manager.dart';
 import '../widgets/confirm_dialog.dart';
@@ -24,6 +26,14 @@ class AdminScaffold extends StatefulWidget {
 
 class _AdminScaffoldState extends State<AdminScaffold> {
   int _currentIndex = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<NotificationsProvider>().fetchNotifications();
+    });
+  }
 
   void _onSelectDrawerItem(int index) {
     if (mounted) {
@@ -55,6 +65,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
     final user = SessionManager.instance.user;
     final fullName = user?['full_name']?.toString() ?? 'Ahmed';
     final initialLetter = fullName.isNotEmpty ? fullName.substring(0, 1).toUpperCase() : 'A';
+    final unreadCount = context.watch<NotificationsProvider>().unreadCount;
 
     return Drawer(
       backgroundColor: const Color(0xFF0F273D),
@@ -197,7 +208,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                     _buildDrawerItem(4, 'توقيع حركات المخزن', Icons.check_circle_outline_rounded),
                     _buildDrawerItem(5, 'تحديثات المهندسين', Icons.rate_review_outlined),
                     _buildDrawerItem(6, 'المستخدمون', Icons.people_outline_rounded),
-                    _buildDrawerItem(7, 'الإشعارات', Icons.notifications_none_rounded),
+                    _buildDrawerItem(7, 'الإشعارات', Icons.notifications_none_rounded, unreadCount),
                   ],
                 ),
               ),
@@ -282,7 +293,7 @@ class _AdminScaffoldState extends State<AdminScaffold> {
     );
   }
 
-  Widget _buildDrawerItem(int index, String title, IconData icon) {
+  Widget _buildDrawerItem(int index, String title, IconData icon, [int badge = 0]) {
     final isSelected = _currentIndex == index;
 
     return Container(
@@ -323,6 +334,22 @@ class _AdminScaffoldState extends State<AdminScaffold> {
                     ),
                   ),
                 ),
+                if (badge > 0)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE53935),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      badge > 99 ? '99+' : '$badge',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),

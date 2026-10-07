@@ -1,4 +1,4 @@
-﻿class WarehouseCategory {
+class WarehouseCategory {
   final int id;
   final String name;
   final String? description;
@@ -9,11 +9,19 @@
     this.description,
   });
 
-  factory WarehouseCategory.fromJson(Map<String, dynamic> json) => WarehouseCategory(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    name: json['name']?.toString() ?? '',
-    description: json['description']?.toString(),
-  );
+  factory WarehouseCategory.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v) {
+      if (v == null) return 0;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? 0;
+    }
+
+    return WarehouseCategory(
+      id: parseInt(json['id']),
+      name: json['name']?.toString() ?? '',
+      description: json['description']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
@@ -54,20 +62,34 @@ class WarehouseItem {
   bool get isLowStock => quantity <= minQuantity;
   bool get active => isActive == 1;
 
-  factory WarehouseItem.fromJson(Map<String, dynamic> json) => WarehouseItem(
-    id: (json['id'] as num?)?.toInt() ?? 0,
-    code: json['code']?.toString() ?? '',
-    name: json['name']?.toString() ?? '',
-    categoryId: (json['category_id'] as num?)?.toInt(),
-    categoryName: json['category_name']?.toString(),
-    unit: json['unit']?.toString() ?? 'قطعة',
-    quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
-    minQuantity: (json['min_quantity'] as num?)?.toDouble() ?? 0.0,
-    unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
-    location: json['location']?.toString(),
-    isActive: (json['is_active'] as num?)?.toInt() ?? 1,
-    notes: json['notes']?.toString(),
-  );
+  factory WarehouseItem.fromJson(Map<String, dynamic> json) {
+    int parseInt(dynamic v, [int fallback = 0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toInt();
+      return int.tryParse(v.toString()) ?? fallback;
+    }
+
+    double parseDouble(dynamic v, [double fallback = 0.0]) {
+      if (v == null) return fallback;
+      if (v is num) return v.toDouble();
+      return double.tryParse(v.toString()) ?? fallback;
+    }
+
+    return WarehouseItem(
+      id: parseInt(json['id']),
+      code: json['code']?.toString() ?? '',
+      name: json['name']?.toString() ?? '',
+      categoryId: json['category_id'] != null ? parseInt(json['category_id']) : null,
+      categoryName: json['category_name']?.toString(),
+      unit: json['unit']?.toString() ?? 'قطعة',
+      quantity: parseDouble(json['quantity']),
+      minQuantity: parseDouble(json['min_quantity']),
+      unitPrice: parseDouble(json['unit_price']),
+      location: json['location']?.toString(),
+      isActive: parseInt(json['is_active'], 1),
+      notes: json['notes']?.toString(),
+    );
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,
