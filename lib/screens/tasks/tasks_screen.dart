@@ -1,3 +1,5 @@
+import 'package:open_filex/open_filex.dart';
+import '../../services/excel_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants.dart';
@@ -30,6 +32,145 @@ class _TasksScreenState extends State<TasksScreen> {
     });
   }
 
+  
+  Future<void> _exportTasksToExcel(List<Task> tasks) async {
+    if (tasks.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا توجد خطط عمل لتصديرها', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kAmber,
+        ),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري إنشاء وتصدير ملف Excel...', style: TextStyle(fontFamily: 'Cairo')),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    final path = await ExcelService.instance.exportTasksToExcel(tasks);
+    if (!mounted) return;
+
+    if (path != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم تصدير ${tasks.length} خطة عمل بنجاح!', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kGreen,
+          action: SnackBarAction(
+            label: 'فتح الملف',
+            textColor: Colors.white,
+            onPressed: () => OpenFilex.open(path),
+          ),
+        ),
+      );
+    } else {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر تصدير الملف', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
+  }
+
+  Future<void> _importTasksFromExcel() async {
+    try {
+      final parsed = await ExcelService.instance.importTasksFromExcel();
+      if (!mounted || parsed == null) return;
+
+      if (parsed.isEmpty) {
+        if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم العثور على أي خطط عمل في الملف أو الأعمدة غير متطابقة', style: TextStyle(fontFamily: 'Cairo')),
+            backgroundColor: kAmber,
+          ),
+        );
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('تأكيد استيراد خطط العمل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('تم قراءة ${parsed.length} خطة عمل من ملف Excel بنجاح.', style: const TextStyle(fontFamily: 'Cairo')),
+              const SizedBox(height: 8),
+              const Text('هل تريد استيرادها وحفظها في قاعدة البيانات الآن؟', style: TextStyle(fontFamily: 'Cairo', color: kMuted)),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: kPaper, borderRadius: BorderRadius.circular(6)),
+                child: Text('عينة: ""', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: kGreen),
+              icon: const Icon(Icons.check, size: 16),
+              label: const Text('اعتماد واستيراد', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true || !mounted) return;
+
+      final messenger = ScaffoldMessenger.of(context);
+      final tasksProvider = context.read<TasksProvider>();
+      int successCount = 0;
+      for (final p in parsed) {
+        try {
+          await widget.api.post('work-plan-save', {
+            'id': 0,
+            'site_id': p['site_id'] ?? 1,
+            'title': p['title'],
+            'description': p['description'] ?? '',
+            'assigned_to': p['assigned_to'] ?? 0,
+            'is_broadcast': p['is_broadcast'] ?? false,
+            'priority': p['priority'] ?? 'medium',
+          });
+          successCount++;
+        } catch (_) {}
+      }
+
+      await tasksProvider.fetchTasks();
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('تم استيراد $successCount من أصل ${parsed.length} خطة بنجاح!', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kGreen,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ أثناء قراءة الملف: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
+  }
+
   Future<void> _openForm({Task? item}) async {
     final saved = await Navigator.push<bool>(
       context,
@@ -40,6 +181,7 @@ class _TasksScreenState extends State<TasksScreen> {
 
     if (saved == true && mounted) {
       await context.read<TasksProvider>().fetchTasks();
+      if (!mounted) return;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -68,6 +210,7 @@ class _TasksScreenState extends State<TasksScreen> {
     if (!mounted) return;
 
     if (success) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم إلغاء خطة العمل بنجاح', style: TextStyle(fontFamily: 'Cairo')),
@@ -91,6 +234,16 @@ class _TasksScreenState extends State<TasksScreen> {
         appBar: AppBar(
           title: const Text('خطط العمل'),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.file_download_outlined),
+              tooltip: 'تصدير إكسل',
+              onPressed: () => _exportTasksToExcel(tasks),
+            ),
+            IconButton(
+              icon: const Icon(Icons.file_upload_outlined),
+              tooltip: 'استيراد إكسل',
+              onPressed: () => _importTasksFromExcel(),
+            ),
             IconButton(
               icon: const Icon(Icons.add_task_rounded),
               tooltip: 'خطة جديدة',
@@ -166,11 +319,35 @@ class _TasksScreenState extends State<TasksScreen> {
               ),
             ],
           ),
-          FilledButton.icon(
-            onPressed: () => _openForm(),
-            style: FilledButton.styleFrom(backgroundColor: kInk),
-            icon: const Icon(Icons.add_rounded, size: 18),
-            label: const Text('+ خطة جديدة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12)),
+                    Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _exportTasksToExcel(prov.filteredTasks),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kGreen,
+                  side: const BorderSide(color: kGreen),
+                ),
+                icon: const Icon(Icons.file_download_outlined, size: 16),
+                label: const Text('تصدير إكسل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _importTasksFromExcel(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kCyan,
+                  side: const BorderSide(color: kCyan),
+                ),
+                icon: const Icon(Icons.file_upload_outlined, size: 16),
+                label: const Text('استيراد إكسل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              FilledButton.icon(
+                onPressed: () => _openForm(),
+                style: FilledButton.styleFrom(backgroundColor: kInk),
+                icon: const Icon(Icons.add_rounded, size: 18),
+                label: const Text('+ خطة جديدة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12)),
+              ),
+            ],
           ),
         ],
       ),

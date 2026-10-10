@@ -1,3 +1,5 @@
+import 'package:open_filex/open_filex.dart';
+import '../../services/excel_service.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants.dart';
@@ -36,6 +38,137 @@ class _ReportsScreenState extends State<ReportsScreen> {
       }
       context.read<ReportsProvider>().fetchReports();
     });
+  }
+
+  
+  Future<void> _exportReportsToExcel(List<Report> reports) async {
+    if (reports.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا توجد تقارير لتصديرها', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kAmber,
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري إنشاء وتصدير ملف Excel...', style: TextStyle(fontFamily: 'Cairo')),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    final path = await ExcelService.instance.exportReportsToExcel(reports);
+    if (!mounted) return;
+
+    if (path != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم تصدير ${reports.length} تقرير بنجاح!', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kGreen,
+          action: SnackBarAction(
+            label: 'فتح الملف',
+            textColor: Colors.white,
+            onPressed: () => OpenFilex.open(path),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر تصدير الملف', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
+  }
+
+  Future<void> _importReportsFromExcel() async {
+    try {
+      final parsed = await ExcelService.instance.importReportsFromExcel();
+      if (!mounted || parsed == null) return;
+
+      if (parsed.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم العثور على أي تقارير في الملف أو الأعمدة غير متطابقة', style: TextStyle(fontFamily: 'Cairo')),
+            backgroundColor: kAmber,
+          ),
+        );
+        return;
+      }
+
+      final confirmed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('معاينة استيراد التقارير', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('تم قراءة ${parsed.length} تقرير من ملف Excel بنجاح.', style: const TextStyle(fontFamily: 'Cairo')),
+              const SizedBox(height: 8),
+              Text('عينة: ""', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kMuted)),
+              const SizedBox(height: 12),
+              const Text('هل تريد حفظها ومزامنتها في النظام الآن؟', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+            FilledButton.icon(
+              onPressed: () => Navigator.pop(ctx, true),
+              style: FilledButton.styleFrom(backgroundColor: kGreen),
+              icon: const Icon(Icons.check, size: 16),
+              label: const Text('اعتماد واستيراد', style: TextStyle(fontFamily: 'Cairo')),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true || !mounted) return;
+
+      final messenger = ScaffoldMessenger.of(context);
+      final reportsProv = context.read<ReportsProvider>();
+      int successCount = 0;
+
+      for (final r in parsed) {
+        try {
+          await widget.api.post('report-save', {
+            'report_date': r['report_date'],
+            'site_id': r['site_id'],
+            'work_progress': r['work_progress'],
+            'workers_count': r['workers_count'],
+            'machinery_count': r['machinery_count'],
+            'work_done': r['work_done'],
+            'issues': r['issues'] ?? '',
+            'materials_used': r['materials_used'] ?? '',
+          });
+          successCount++;
+        } catch (_) {}
+      }
+
+      await reportsProv.fetchReports();
+      if (!mounted) return;
+
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text('تم استيراد $successCount من أصل ${parsed.length} تقرير بنجاح!', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kGreen,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ أثناء قراءة الملف: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
   }
 
   Future<void> _openDetail(Report report) async {
@@ -130,8 +263,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
       onRefresh: () => reportsProv.fetchReports(),
       child: Scaffold(
         drawer: widget.drawer,
-        appBar: AppBar(
+                appBar: AppBar(
           title: const Text('التقارير اليومية'),
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.file_download_outlined),
+              tooltip: 'تصدير إكسل',
+              onPressed: () => _exportReportsToExcel(reports),
+            ),
+            IconButton(
+              icon: const Icon(Icons.file_upload_outlined),
+              tooltip: 'استيراد إكسل',
+              onPressed: () => _importReportsFromExcel(),
+            ),
+          ],
         ),
         body: StateView(
           loading: reportsProv.isLoading && reportsProv.reports.isEmpty,
@@ -193,8 +338,33 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
             ],
           ),
-          if (prov.pendingCount > 0)
-            Pill.warning(text: '${prov.pendingCount} بانتظار المراجعة'),
+                    Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              OutlinedButton.icon(
+                onPressed: () => _exportReportsToExcel(prov.filteredReports),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kGreen,
+                  side: const BorderSide(color: kGreen),
+                ),
+                icon: const Icon(Icons.file_download_outlined, size: 16),
+                label: const Text('تصدير إكسل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              OutlinedButton.icon(
+                onPressed: () => _importReportsFromExcel(),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: kCyan,
+                  side: const BorderSide(color: kCyan),
+                ),
+                icon: const Icon(Icons.file_upload_outlined, size: 16),
+                label: const Text('استيراد إكسل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+              ),
+              if (prov.pendingCount > 0)
+                Pill.warning(text: '${prov.pendingCount} بانتظار المراجعة'),
+            ],
+          ),
         ],
       ),
     );

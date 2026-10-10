@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'package:open_filex/open_filex.dart';
+import '../../services/excel_service.dart';
+import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/report.dart';
@@ -114,11 +116,55 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
+
+  Future<void> _exportSingleReport() async {
+    if (_report == null) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('جاري إنشاء ملف Excel للتقرير والمصروفات...', style: TextStyle(fontFamily: 'Cairo')),
+        duration: Duration(seconds: 1),
+      ),
+    );
+
+    final path = await ExcelService.instance.exportSingleReportToExcel(_report!);
+    if (!mounted) return;
+
+    if (path != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تم تصدير التقرير #${_report!.id} بنجاح!', style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppTheme.success,
+          action: SnackBarAction(
+            label: 'فتح الملف',
+            textColor: Colors.white,
+            onPressed: () => OpenFilex.open(path),
+          ),
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر تصدير التقرير', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('تقرير يومي #'),
+        title: Text('تقرير يومي #${widget.reportId}'),
+        actions: [
+          if (_report != null)
+            IconButton(
+              icon: const Icon(Icons.file_download_outlined),
+              tooltip: 'تصدير التقرير (Excel)',
+              onPressed: _exportSingleReport,
+            ),
+        ],
       ),
       body: _loading
           ? const LoadingState(message: 'جاري تحميل التقرير والمصروفات...')
