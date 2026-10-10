@@ -38,16 +38,16 @@ class NotificationService {
         const initSettings = InitializationSettings(android: initAndroid);
 
         await flutterLocalNotificationsPlugin.initialize(
-          initSettings,
-          onSelectNotification: (payload) async {
-            handleNotificationLink(payload);
+          settings: initSettings,
+          onDidReceiveNotificationResponse: (NotificationResponse response) {
+            handleNotificationLink(response.payload);
           },
         );
 
         const channel = AndroidNotificationChannel(
           kNotificationChannelId,
           kNotificationChannelName,
-          kNotificationChannelDesc,
+          description: kNotificationChannelDesc,
           importance: Importance.max,
           playSound: true,
           enableVibration: true,
@@ -115,7 +115,7 @@ class NotificationService {
           android: AndroidNotificationDetails(
             kNotificationChannelId,
             kNotificationChannelName,
-            kNotificationChannelDesc,
+            channelDescription: kNotificationChannelDesc,
             importance: Importance.max,
             priority: Priority.high,
             playSound: true,
@@ -129,10 +129,10 @@ class NotificationService {
         );
 
         await flutterLocalNotificationsPlugin.show(
-          id,
-          title,
-          message,
-          details,
+          id: id,
+          title: title,
+          body: message,
+          notificationDetails: details,
           payload: link,
         );
       } catch (_) {}
@@ -193,7 +193,7 @@ void backgroundNotificationHandler(ServiceInstance service) async {
               android: AndroidNotificationDetails(
                 kNotificationChannelId,
                 kNotificationChannelName,
-                kNotificationChannelDesc,
+                channelDescription: kNotificationChannelDesc,
                 importance: Importance.max,
                 priority: Priority.high,
                 playSound: true,
@@ -207,10 +207,10 @@ void backgroundNotificationHandler(ServiceInstance service) async {
             );
 
             await flutterLocalNotificationsPlugin.show(
-              curId,
-              title,
-              msg,
-              details,
+              id: curId,
+              title: title,
+              body: msg,
+              notificationDetails: details,
               payload: link,
             );
           }
