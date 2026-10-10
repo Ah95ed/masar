@@ -2,8 +2,10 @@ import 'package:flutter/foundation.dart';
 import '../core/api_exception.dart';
 import '../models/notification.dart';
 import '../services/admin_api.dart';
+import '../services/notification_service.dart';
+import '../widgets/in_app_notification_toast.dart';
 
-/// موفر حالة الإشعارات والتنبيهات الحية
+/// موفر حالة الإشعارات والتنبيهات اللحظية
 class NotificationsProvider extends ChangeNotifier {
   final AdminApi api;
 
@@ -12,6 +14,7 @@ class NotificationsProvider extends ChangeNotifier {
   List<NotificationItem> _notifications = [];
   bool _isLoading = false;
   String? _error;
+  int _lastNotificationId = 0;
 
   List<NotificationItem> get notifications => _notifications;
   bool get isLoading => _isLoading;
@@ -19,10 +22,12 @@ class NotificationsProvider extends ChangeNotifier {
 
   int get unreadCount => _notifications.where((n) => !n.read).length;
 
-  Future<void> fetchNotifications() async {
-    _isLoading = true;
-    _error = null;
-    notifyListeners();
+  Future<void> fetchNotifications({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      _error = null;
+      notifyListeners();
+    }
 
     try {
       final res = await api.get('notifications');
@@ -32,10 +37,38 @@ class NotificationsProvider extends ChangeNotifier {
       } else if (res is Map) {
         rawList = res['notifications'] ?? res['data'] ?? res['items'] ?? [];
       }
-      _notifications = rawList
+      final fetched = rawList
           .whereType<Map>()
           .map((e) => NotificationItem.fromJson(Map<String, dynamic>.from(e)))
           .toList();
+
+      if (fetched.isNotEmpty) {
+        final latest = fetched.first;
+        if (_lastNotificationId > 0 && latest.id > _lastNotificationId && !latest.read) {
+          // 1. إظهار الإشعار المحلي الأصلي في النظام (ويندوز أو أندرويد)
+          NotificationService.instance.showLocalNotification(
+            id: latest.id,
+            title: latest.title,
+            message: latest.message,
+            link: latest.link,
+          );
+
+          // 2. إظهار البطاقة العائمة الأنيقة داخل التطبيق (In-App Toast)
+          final ctx = NotificationService.navigatorKey.currentContext;
+          if (ctx != null && ctx.mounted) {
+            InAppNotificationToast.show(
+              ctx,
+              title: latest.title,
+              message: latest.message,
+              type: latest.type,
+              onTap: () => NotificationService.handleNotificationLink(latest.link),
+            );
+          }
+        }
+        _lastNotificationId = latest.id;
+      }
+
+      _notifications = fetched;
       _isLoading = false;
     } on ApiException catch (e) {
       _error = e.message;

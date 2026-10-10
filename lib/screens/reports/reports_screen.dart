@@ -236,79 +236,143 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildReportsTable(List<Report> reports) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: kLine),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(kPaper),
-          columns: const [
-            DataColumn(label: Text('التاريخ والموقع', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('المهندس', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الإنجاز', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('العمال/الآليات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('ملخص العمل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('المراجعة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-          ],
-          rows: reports.map((r) {
-            final isSubmitted = r.status == 'submitted';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minWidth = 980.0;
+        final tableWidth = constraints.maxWidth > minWidth ? constraints.maxWidth : minWidth;
 
-            return DataRow(
-              cells: [
-                DataCell(Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(r.reportDate, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-                    Text(r.siteName ?? 'الموقع #${r.siteId}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted)),
-                  ],
-                )),
-                DataCell(Text(r.engineerName ?? 'مهندس #${r.engineerId}', style: const TextStyle(fontFamily: 'Cairo'))),
-                DataCell(Text('${r.workProgress}%', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: kCyan))),
-                DataCell(Text('${r.manpowerCount} / ${r.machineryCount}', style: const TextStyle(fontFamily: 'Cairo'))),
-                DataCell(Pill(
-                  text: r.statusLabel,
-                  type: r.status == 'approved' ? PillType.success : (r.status == 'rejected' ? PillType.danger : PillType.warning),
-                )),
-                DataCell(SizedBox(
-                  width: 180,
-                  child: Text(r.workDone, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12)),
-                )),
-                DataCell(Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextButton.icon(
-                      icon: const Icon(Icons.remove_red_eye_outlined, size: 16),
-                      label: const Text('معاينة', style: TextStyle(fontFamily: 'Cairo', fontSize: 11)),
-                      onPressed: () => _openDetail(r),
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: kLine),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    color: kPaper,
+                    child: const Row(
+                      children: [
+                        Expanded(flex: 22, child: Text('التاريخ والموقع', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 16, child: Text('المهندس', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 12, child: Text('الإنجاز', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 14, child: Text('العمال/الآليات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 14, child: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 24, child: Text('ملخص العمل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 20, child: Align(alignment: AlignmentDirectional.centerEnd, child: Text('المراجعة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk)))),
+                      ],
                     ),
-                    if (isSubmitted) ...[
-                      IconButton(
-                        icon: const Icon(Icons.check_circle_outline_rounded, color: kGreen, size: 18),
-                        tooltip: 'اعتماد',
-                        onPressed: () => _quickReview(r, 'approved'),
+                  ),
+                  const Divider(height: 1, thickness: 1, color: kLine),
+                  ...reports.map((report) {
+                    final isSubmitted = report.status == 'submitted';
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: kLine, width: 0.8)),
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.cancel_outlined, color: kRed, size: 18),
-                        tooltip: 'رفض',
-                        onPressed: () => _quickReview(r, 'rejected'),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 22,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(report.reportDate, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk)),
+                                Text(report.siteName ?? 'الموقع #', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted), overflow: TextOverflow.ellipsis),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 16,
+                            child: Text(
+                              report.engineerName ?? 'مهندس #',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kInk),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 12,
+                            child: Text(
+                              '%',
+                              style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12, color: kCyan),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 14,
+                            child: Text(
+                              ' / ',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kInk),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 14,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Pill(
+                                text: report.statusLabel,
+                                type: report.status == 'approved' ? PillType.success : (report.status == 'rejected' ? PillType.danger : PillType.warning),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 24,
+                            child: Text(
+                              report.workDone,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kInk),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 20,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  TextButton.icon(
+                                    icon: const Icon(Icons.remove_red_eye_outlined, size: 16),
+                                    label: const Text('معاينة', style: TextStyle(fontFamily: 'Cairo', fontSize: 11)),
+                                    onPressed: () => _openDetail(report),
+                                  ),
+                                  if (isSubmitted) ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.check_circle_outline_rounded, color: kGreen, size: 18),
+                                      tooltip: 'اعتماد',
+                                      onPressed: () => _quickReview(report, 'approved'),
+                                    ),
+                                    IconButton(
+                                      icon: const Icon(Icons.cancel_outlined, color: kRed, size: 18),
+                                      tooltip: 'رفض',
+                                      onPressed: () => _quickReview(report, 'rejected'),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ],
-                )),
-              ],
-            );
-          }).toList(),
-        ),
-      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
-
   Widget _buildReportsCards(List<Report> reports) {
     return Column(
       children: reports.map((r) {

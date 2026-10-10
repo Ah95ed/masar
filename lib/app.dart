@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+import 'services/notification_service.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'core/constants.dart';
@@ -42,6 +43,7 @@ class _MaxlondAppState extends State<MaxlondApp> {
         ChangeNotifierProvider(create: (_) => NotificationsProvider(api: _api)),
       ],
       child: MaterialApp(
+        navigatorKey: NotificationService.navigatorKey,
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,

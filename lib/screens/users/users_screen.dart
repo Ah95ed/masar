@@ -236,81 +236,144 @@ class _UsersScreenState extends State<UsersScreen> {
   }
 
   Widget _buildUsersTable(List<User> users) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: kLine),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(kPaper),
-          columns: const [
-            DataColumn(label: Text('المستخدم', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الدور', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('التواصل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('آخر دخول', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الإجراء', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-          ],
-          rows: users.map((u) {
-            final isAdmin = u.role == 'admin';
-            final isActive = u.isActive == 1;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minWidth = 950.0;
+        final tableWidth = constraints.maxWidth > minWidth ? constraints.maxWidth : minWidth;
 
-            return DataRow(
-              cells: [
-                DataCell(Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(u.fullName.isNotEmpty ? u.fullName : u.username, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-                    Text('${u.username} · ${u.email}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted)),
-                  ],
-                )),
-                DataCell(Text(u.roleLabel, style: const TextStyle(fontFamily: 'Cairo'))),
-                DataCell(Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(u.phone ?? '-', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12)),
-                    if (u.specialization != null)
-                      Text(u.specialization!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: kMuted)),
-                  ],
-                )),
-                DataCell(_buildStatusPill(u)),
-                DataCell(const Text('مسجل نشط', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted))),
-                DataCell(Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (isAdmin)
-                      const Pill.info(text: 'محمي')
-                    else ...[
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
-                        tooltip: 'تعديل',
-                        onPressed: () => _openForm(item: u),
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: kLine),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    color: kPaper,
+                    child: const Row(
+                      children: [
+                        Expanded(flex: 30, child: Text('المستخدم', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 18, child: Text('الدور', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 24, child: Text('التواصل والتخصص', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 16, child: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 18, child: Text('آخر دخول', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 18, child: Align(alignment: AlignmentDirectional.centerEnd, child: Text('الإجراءات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk)))),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, thickness: 1, color: kLine),
+                  ...users.map((u) {
+                    final isAdmin = u.role == 'admin';
+                    final isActive = u.isActive == 1;
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: kLine, width: 0.8)),
                       ),
-                      IconButton(
-                        icon: Icon(
-                          isActive ? Icons.block_rounded : Icons.check_circle_outline,
-                          size: 18,
-                          color: isActive ? kRed : kGreen,
-                        ),
-                        tooltip: isActive ? 'تعطيل' : 'تفعيل',
-                        onPressed: () => _toggleStatus(u),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 30,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  u.fullName.isNotEmpty ? u.fullName : u.username,
+                                  style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(
+                                  ' • ',
+                                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 18,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text(u.roleLabel, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kInk)),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 24,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(u.phone ?? '-', style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kInk)),
+                                if (u.specialization != null)
+                                  Text(u.specialization!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: kMuted), overflow: TextOverflow.ellipsis),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 16,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: _buildStatusPill(u),
+                            ),
+                          ),
+                          const Expanded(
+                            flex: 18,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Text('مسجل نشط', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kMuted)),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 18,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isAdmin)
+                                    const Pill.info(text: 'محمي')
+                                  else ...[
+                                    IconButton(
+                                      icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
+                                      tooltip: 'تعديل',
+                                      onPressed: () => _openForm(item: u),
+                                    ),
+                                    IconButton(
+                                      icon: Icon(
+                                        isActive ? Icons.block_rounded : Icons.check_circle_outline,
+                                        size: 18,
+                                        color: isActive ? kRed : kGreen,
+                                      ),
+                                      tooltip: isActive ? 'تعطيل' : 'تفعيل',
+                                      onPressed: () => _toggleStatus(u),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ],
-                )),
-              ],
-            );
-          }).toList(),
-        ),
-      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
-
   Widget _buildUsersCards(List<User> users) {
     return Column(
       children: users.map((u) {

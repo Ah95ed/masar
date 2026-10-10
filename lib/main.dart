@@ -1,6 +1,7 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import 'core/secure_storage.dart';
+import 'services/notification_service.dart';
 import 'services/session_manager.dart';
 import 'app.dart';
 
@@ -8,5 +9,6 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await SecureStorage.instance.init();
   await SessionManager.instance.restore();
+  await NotificationService.instance.init();
   runApp(const MaxlondApp());
 }

@@ -300,52 +300,122 @@ class _MachineryScreenState extends State<MachineryScreen> {
   }
 
   Widget _buildMachineryTable(List<Machinery> list) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: kLine),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(kPaper),
-          columns: const [
-            DataColumn(label: Text('الكود', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الآلية', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('اللوحة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('المشغل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('كلفة الساعة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الإجراء', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-          ],
-          rows: list.map((m) {
-            final isAvailable = m.status == 'available';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minWidth = 950.0;
+        final tableWidth = constraints.maxWidth > minWidth ? constraints.maxWidth : minWidth;
 
-            return DataRow(
-              cells: [
-                DataCell(Pill.info(text: m.code)),
-                DataCell(Text(m.name, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-                DataCell(Text(m.plateNumber ?? '-', style: const TextStyle(fontFamily: 'Cairo'))),
-                DataCell(Text(m.driverName ?? 'غير معين', style: const TextStyle(fontFamily: 'Cairo'))),
-                DataCell(Pill(
-                  text: m.statusLabel,
-                  type: isAvailable ? PillType.success : PillType.neutral,
-                )),
-                DataCell(Text('${m.hourlyRate.toStringAsFixed(0)} \$', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-                DataCell(IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
-                  tooltip: 'تعديل',
-                  onPressed: () => _openForm(item: m),
-                )),
-              ],
-            );
-          }).toList(),
-        ),
-      ),
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: kLine),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    color: kPaper,
+                    child: const Row(
+                      children: [
+                        Expanded(flex: 14, child: Text('الكود', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 26, child: Text('الآلية', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 18, child: Text('اللوحة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 20, child: Text('المشغل', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 16, child: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 16, child: Text('كلفة الساعة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 14, child: Align(alignment: AlignmentDirectional.centerEnd, child: Text('الإجراءات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk)))),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, thickness: 1, color: kLine),
+                  ...list.map((item) {
+                    final isAvailable = item.status == 'available';
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: kLine, width: 0.8)),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 14,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Pill.info(text: item.code),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 26,
+                            child: Text(
+                              item.name,
+                              style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 18,
+                            child: Text(
+                              item.plateNumber ?? '-',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kInk),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 20,
+                            child: Text(
+                              item.driverName ?? 'غير معين',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kInk),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 16,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Pill(
+                                text: item.statusLabel,
+                                type: isAvailable ? PillType.success : PillType.neutral,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 16,
+                            child: Text(
+                              '${item.hourlyRate.toStringAsFixed(0)} \$',
+                              style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 12, color: kInk),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 14,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
+                                tooltip: 'تعديل',
+                                onPressed: () => _openForm(item: item),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
-
   Widget _buildMachineryCards(List<Machinery> list) {
     return Column(
       children: list.map((m) {

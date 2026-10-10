@@ -217,95 +217,166 @@ class _TasksScreenState extends State<TasksScreen> {
   }
 
   Widget _buildTasksTable(List<Task> tasks) {
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: const BorderSide(color: kLine),
-      ),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: DataTable(
-          headingRowColor: WidgetStateProperty.all(kPaper),
-          columns: const [
-            DataColumn(label: Text('المهمة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الموقع', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('المهندس', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الأولوية', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('التقدم', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-            DataColumn(label: Text('الإجراء', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold))),
-          ],
-          rows: tasks.map((t) {
-            final isDone = t.status == 'done' || t.status == 'completed';
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minWidth = 950.0;
+        final tableWidth = constraints.maxWidth > minWidth ? constraints.maxWidth : minWidth;
 
-            return DataRow(
-              cells: [
-                DataCell(Row(
-                  children: [
-                    Text(t.title, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-                    if (t.isBroadcast) ...[
-                      const SizedBox(width: 6),
-                      const Pill.info(text: 'تعميم'),
-                    ],
-                  ],
-                )),
-                DataCell(Text(t.siteName ?? 'الموقع #${t.siteId}', style: const TextStyle(fontFamily: 'Cairo'))),
-                DataCell(Text(t.assignedToName ?? 'غير معين', style: const TextStyle(fontFamily: 'Cairo'))),
-                DataCell(_buildPriorityPill(t.priority)),
-                DataCell(Pill(
-                  text: t.statusLabel,
-                  type: isDone ? PillType.success : PillType.warning,
-                )),
-                DataCell(Row(
-                  children: [
-                    SizedBox(
-                      width: 80,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(
-                          value: t.progress / 100.0,
-                          minHeight: 6,
-                          backgroundColor: kLine,
-                          valueColor: AlwaysStoppedAnimation<Color>(isDone ? kGreen : kCyan),
-                        ),
+        return Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+            side: const BorderSide(color: kLine),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: SizedBox(
+              width: tableWidth,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    color: kPaper,
+                    child: const Row(
+                      children: [
+                        Expanded(flex: 30, child: Text('المهمة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 20, child: Text('الموقع', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 20, child: Text('المهندس', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 15, child: Text('الأولوية', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 15, child: Text('الحالة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 20, child: Text('التقدم', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk))),
+                        Expanded(flex: 20, child: Align(alignment: AlignmentDirectional.centerEnd, child: Text('الإجراءات', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk)))),
+                      ],
+                    ),
+                  ),
+                  const Divider(height: 1, thickness: 1, color: kLine),
+                  ...tasks.map((t) {
+                    final isDone = t.status == 'done' || t.status == 'completed';
+
+                    return Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: const BoxDecoration(
+                        border: Border(bottom: BorderSide(color: kLine, width: 0.8)),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text('${t.progress}%', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold)),
-                  ],
-                )),
-                DataCell(Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
-                      tooltip: 'تعديل',
-                      onPressed: () => _openForm(item: t),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.history_rounded, size: 18, color: kInk),
-                      tooltip: 'السجل',
-                      onPressed: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => WorkUpdatesScreen(api: widget.api, planId: t.id)),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 30,
+                            child: Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    t.title,
+                                    style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 13, color: kInk),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                                if (t.isBroadcast) ...[
+                                  const SizedBox(width: 6),
+                                  const Pill.info(text: 'تعميم'),
+                                ],
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 20,
+                            child: Text(
+                              t.siteName ?? 'الموقع #',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: kInk),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 20,
+                            child: Text(
+                              t.assignedToName ?? 'غير معين',
+                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: kInk),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 15,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: _buildPriorityPill(t.priority),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 15,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerStart,
+                              child: Pill(
+                                text: t.statusLabel,
+                                type: isDone ? PillType.success : PillType.warning,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            flex: 20,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(3),
+                                    child: LinearProgressIndicator(
+                                      value: t.progress / 100.0,
+                                      minHeight: 6,
+                                      backgroundColor: kLine,
+                                      valueColor: AlwaysStoppedAnimation<Color>(isDone ? kGreen : kCyan),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '%',
+                                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: kInk),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Expanded(
+                            flex: 20,
+                            child: Align(
+                              alignment: AlignmentDirectional.centerEnd,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit_outlined, size: 18, color: kCyan),
+                                    tooltip: 'تعديل',
+                                    onPressed: () => _openForm(item: t),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.history_rounded, size: 18, color: kInk),
+                                    tooltip: 'السجل',
+                                    onPressed: () => Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (_) => WorkUpdatesScreen(api: widget.api, planId: t.id)),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.cancel_outlined, size: 18, color: kRed),
+                                    tooltip: 'إلغاء',
+                                    onPressed: () => _cancelTask(t),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.cancel_outlined, size: 18, color: kRed),
-                      tooltip: 'إلغاء',
-                      onPressed: () => _cancelTask(t),
-                    ),
-                  ],
-                )),
-              ],
-            );
-          }).toList(),
-        ),
-      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
-
   Widget _buildTasksCards(List<Task> tasks) {
     return Column(
       children: tasks.map((t) {
