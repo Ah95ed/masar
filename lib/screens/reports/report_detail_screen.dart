@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../services/excel_service.dart';
 import 'package:flutter/material.dart';
@@ -174,6 +175,255 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
+
+  void _previewReceipt(ReportReceipt receipt) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(12),
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 800, maxHeight: 750),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: const [
+              BoxShadow(color: Colors.black54, blurRadius: 20, offset: Offset(0, 10)),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  children: [
+                    const Icon(Icons.receipt_long, color: Color(0xFF0EA5E9), size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            receipt.originalName,
+                            style: const TextStyle(
+                              fontFamily: 'Cairo',
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (receipt.fileSizeLabel.isNotEmpty)
+                            Text(
+                              receipt.fileSizeLabel,
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                color: Colors.white.withOpacity(0.7),
+                                fontSize: 11,
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white70),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, color: Colors.white24),
+              // Body
+              Flexible(
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
+                  child: Container(
+                    color: Colors.black87,
+                    child: receipt.isImage
+                        ? InteractiveViewer(
+                            panEnabled: true,
+                            minScale: 0.5,
+                            maxScale: 4.0,
+                            child: Center(
+                              child: CachedNetworkImage(
+                                imageUrl: receipt.fullUrl,
+                                placeholder: (context, url) => const Padding(
+                                  padding: EdgeInsets.all(40),
+                                  child: CircularProgressIndicator(color: Color(0xFF0EA5E9)),
+                                ),
+                                errorWidget: (context, url, error) => Padding(
+                                  padding: const EdgeInsets.all(30),
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
+                                      const SizedBox(height: 10),
+                                      Text(
+                                        'تعذر تحميل صورة الوصل مباشرة\n${receipt.fullUrl}',
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(fontFamily: 'Cairo', color: Colors.white70, fontSize: 12),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                fit: BoxFit.contain,
+                              ),
+                            ),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.all(40),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.description_outlined, color: Color(0xFF0EA5E9), size: 64),
+                                const SizedBox(height: 16),
+                                Text(
+                                  receipt.originalName,
+                                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  receipt.fullUrl,
+                                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white60, fontSize: 11),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReceiptsCard(List<ReportReceipt> receipts) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionTitle('الوصولات والسندات والمرفقات (${receipts.length})'),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.border),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: receipts.isEmpty
+                ? const Row(
+                    children: [
+                      Icon(Icons.receipt_long_outlined, color: Colors.grey, size: 24),
+                      SizedBox(width: 10),
+                      Text(
+                        'لا توجد وصولات أو سندات مرفقة بهذا التقرير',
+                        style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontSize: 12),
+                      ),
+                    ],
+                  )
+                : Column(
+                    children: [
+                      GridView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                          maxCrossAxisExtent: 200,
+                          mainAxisExtent: 180,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                        ),
+                        itemCount: receipts.length,
+                        itemBuilder: (context, index) {
+                          final r = receipts[index];
+                          return InkWell(
+                            onTap: () => _previewReceipt(r),
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: AppTheme.border),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Expanded(
+                                    child: ClipRRect(
+                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(9)),
+                                      child: r.isImage
+                                          ? CachedNetworkImage(
+                                              imageUrl: r.fullUrl,
+                                              fit: BoxFit.cover,
+                                              placeholder: (_, __) => Container(
+                                                color: Colors.grey.shade200,
+                                                child: const Center(
+                                                  child: SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF0EA5E9)),
+                                                  ),
+                                                ),
+                                              ),
+                                              errorWidget: (_, __, ___) => Container(
+                                                color: Colors.grey.shade200,
+                                                child: const Icon(Icons.receipt_outlined, color: Colors.grey, size: 36),
+                                              ),
+                                            )
+                                          : Container(
+                                              color: Colors.grey.shade100,
+                                              child: const Icon(Icons.description_outlined, color: Color(0xFF0EA5E9), size: 40),
+                                            ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                    color: Colors.white,
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          r.originalName,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: const TextStyle(
+                                            fontFamily: 'Cairo',
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 11,
+                                          ),
+                                        ),
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              r.fileSizeLabel.isNotEmpty ? r.fileSizeLabel : 'معاينة',
+                                              style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: Colors.grey),
+                                            ),
+                                            const Icon(Icons.zoom_in_rounded, size: 16, color: Color(0xFF0EA5E9)),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildContent() {
     final rep = _report!;
     final isPending = rep.status == 'submitted';
@@ -290,6 +540,9 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         ],
 
         // نموذج المراجعة والاعتماد
+                _buildReceiptsCard(rep.receipts),
+        const SizedBox(height: 16),
+
         _buildSectionTitle('ملاحظات وقرار المدير العام'),
         Card(
           elevation: 0,

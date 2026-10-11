@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
@@ -9,7 +10,8 @@ import 'package:http/http.dart' as http;
 import 'package:local_notifier/local_notifier.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
 
 const String kNotificationChannelId = 'maxlond_urgent_channel';
 const String kNotificationChannelName = 'تنبيهات ماكسلوند العاجلة';
@@ -20,7 +22,8 @@ class NotificationService {
   NotificationService._();
   static final NotificationService instance = NotificationService._();
 
-  static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   bool _initialized = false;
 
@@ -34,7 +37,9 @@ class NotificationService {
       }
 
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        const initAndroid = AndroidInitializationSettings('@mipmap/ic_launcher');
+        const initAndroid = AndroidInitializationSettings(
+          '@mipmap/ic_launcher',
+        );
         const initSettings = InitializationSettings(android: initAndroid);
 
         await flutterLocalNotificationsPlugin.initialize(
@@ -54,7 +59,9 @@ class NotificationService {
         );
 
         await flutterLocalNotificationsPlugin
-            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+            .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin
+            >()
             ?.createNotificationChannel(channel);
 
         final service = FlutterBackgroundService();
@@ -85,10 +92,7 @@ class NotificationService {
   }) async {
     if (kIsWeb || defaultTargetPlatform != TargetPlatform.windows) return;
     try {
-      final notif = LocalNotification(
-        title: title,
-        body: message,
-      );
+      final notif = LocalNotification(title: title, body: message);
       notif.onClick = () {
         handleNotificationLink(link);
       };
@@ -157,7 +161,9 @@ void backgroundNotificationHandler(ServiceInstance service) async {
 
       if (token.isEmpty) return;
 
-      final url = Uri.parse('https://vehiclegate.ghusun.net/api/management.php?route=notifications');
+      final url = Uri.parse(
+        'https://vehiclegate.ghusun.net/api/management.php?route=notifications',
+      );
       final res = await http.get(
         url,
         headers: {

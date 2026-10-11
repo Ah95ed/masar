@@ -95,12 +95,31 @@ class UsersProvider extends ChangeNotifier {
   }
 
   Future<bool> toggleUserStatus(User user) async {
-    final nextStatus = user.isActive == 1 ? 0 : 1;
+    final nextActive = user.isActive == 1 ? 0 : 1;
+    final nextStatus = nextActive == 1 ? 'active' : 'inactive';
     try {
-      await api.post('user-status', {
-        'user_id': user.id,
-        'is_active': nextStatus,
-      });
+      try {
+        await api.post('user-save', {
+          'id': user.id,
+          'user_id': user.id,
+          'full_name': user.fullName.isNotEmpty ? user.fullName : user.username,
+          'username': user.username,
+          'email': user.email,
+          'role': user.role,
+          'phone': user.phone ?? '',
+          'specialization': user.specialization ?? '',
+          'is_active': nextActive,
+          'status': nextStatus,
+          'approval_status': nextActive == 1 ? 'approved' : 'rejected',
+        });
+      } catch (_) {
+        await api.post('user-status', {
+          'user_id': user.id,
+          'id': user.id,
+          'status': nextStatus,
+          'is_active': nextActive,
+        });
+      }
       await fetchUsers();
       return true;
     } on ApiException catch (e) {

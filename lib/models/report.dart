@@ -67,6 +67,34 @@ class ReportReceipt {
     this.fileSize,
   });
 
+  String get fullUrl {
+    if (filePath.isEmpty) return '';
+    if (filePath.startsWith('http://') || filePath.startsWith('https://')) {
+      return filePath;
+    }
+    const origin = 'https://vehiclegate.ghusun.net';
+    final cleanPath = filePath.startsWith('/') ? filePath : '/$filePath';
+    return '$origin$cleanPath';
+  }
+
+  bool get isImage {
+    final lower = filePath.toLowerCase();
+    final type = fileType?.toLowerCase() ?? '';
+    return lower.endsWith('.jpg') ||
+        lower.endsWith('.jpeg') ||
+        lower.endsWith('.png') ||
+        lower.endsWith('.webp') ||
+        lower.endsWith('.gif') ||
+        type.startsWith('image/');
+  }
+
+  String get fileSizeLabel {
+    if (fileSize == null || fileSize! <= 0) return '';
+    if (fileSize! < 1024) return '$fileSize B';
+    if (fileSize! < 1024 * 1024) return '${(fileSize! / 1024).round()} KB';
+    return '${(fileSize! / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
   factory ReportReceipt.fromJson(Map<String, dynamic> json) {
     int parseInt(dynamic v) {
       if (v == null) return 0;
@@ -76,10 +104,10 @@ class ReportReceipt {
 
     return ReportReceipt(
       id: parseInt(json['id']),
-      filePath: json['file_path']?.toString() ?? '',
-      originalName: json['original_name']?.toString() ?? '',
-      fileType: json['file_type']?.toString(),
-      fileSize: json['file_size'] != null ? parseInt(json['file_size']) : null,
+      filePath: json['file_path']?.toString() ?? json['path']?.toString() ?? json['url']?.toString() ?? '',
+      originalName: json['original_name']?.toString() ?? json['name']?.toString() ?? json['filename']?.toString() ?? 'وصل / مستند',
+      fileType: json['file_type']?.toString() ?? json['type']?.toString(),
+      fileSize: json['file_size'] != null ? parseInt(json['file_size']) : (json['size'] != null ? parseInt(json['size']) : null),
     );
   }
 
@@ -175,7 +203,7 @@ class Report {
       expList = rawExpenses.map((e) => ReportExpense.fromJson(Map<String, dynamic>.from(e))).toList();
     }
 
-    var rawReceipts = json['receipts'];
+    var rawReceipts = json['receipts'] ?? json['attachments'] ?? json['receipt_items'] ?? json['files'];
     List<ReportReceipt> recList = [];
     if (rawReceipts is List) {
       recList = rawReceipts.map((e) => ReportReceipt.fromJson(Map<String, dynamic>.from(e))).toList();

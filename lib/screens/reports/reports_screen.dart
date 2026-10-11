@@ -567,9 +567,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       r.siteName ?? 'الموقع #${r.siteId}',
                       style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: kInk),
                     ),
-                    Pill(
-                      text: r.statusLabel,
-                      type: r.status == 'approved' ? PillType.success : (r.status == 'rejected' ? PillType.danger : PillType.warning),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (r.receipts.isNotEmpty) ...[
+                          Pill.info(text: '${r.receipts.length} وصل'),
+                          const SizedBox(width: 6),
+                        ],
+                        Pill(
+                          text: r.statusLabel,
+                          type: r.status == 'approved' ? PillType.success : (r.status == 'rejected' ? PillType.danger : PillType.warning),
+                        ),
+                      ],
                     ),
                   ],
                 ),

@@ -83,11 +83,11 @@ class _PendingUsersScreenState extends State<PendingUsersScreen> {
     } catch (_) {}
   }
 
-  Future<void> _approveUser(User user) async {
+      Future<void> _approveUser(User user) async {
     final confirmed = await ConfirmDialog.show(
       context,
       title: 'اعتماد الحساب',
-      message: 'هل أنت متأكد من رغبتك في اعتماد حساب "${user.fullName}" وتفعيله؟',
+      message: 'هل أنت متأكد من رغبتك في اعتماد حساب "" وتفعيله؟',
       confirmText: 'اعتماد الحساب',
       isDestructive: false,
     );
@@ -95,13 +95,67 @@ class _PendingUsersScreenState extends State<PendingUsersScreen> {
     if (!confirmed || !mounted) return;
     setState(() => _actionLoading = true);
 
+    bool succeeded = false;
+    dynamic lastError;
+
+    final fullUserBody = <String, dynamic>{
+      'id': user.id,
+      'user_id': user.id,
+      'full_name': user.fullName.trim().isNotEmpty ? user.fullName.trim() : (user.username.isNotEmpty ? user.username : 'مهندس ميداني'),
+      'username': user.username.trim().isNotEmpty ? user.username.trim() : 'eng_',
+      'email': user.email.trim().isNotEmpty ? user.email.trim() : 'eng_@maxlond.com',
+      'role': user.role.trim().isNotEmpty ? user.role.trim() : 'engineer',
+      'phone': user.phone ?? '',
+      'specialization': user.specialization ?? '',
+      'is_active': 1,
+      'status': 'active',
+      'approval_status': 'approved',
+    };
+
+    // 1. المحاولة الأساسية: user-save بكامل البيانات المطلوبة للتحقق من الاسم واسم المستخدم والبريد والدور
     try {
+      await widget.api.post('user-save', fullUserBody);
+      succeeded = true;
+    } catch (e) {
+      lastError = e;
+    }
+
+    // 2. المحاولة الثانية: user-status
+    if (!succeeded) {
       try {
-        await widget.api.post('user-approve', {'user_id': user.id});
-      } catch (_) {
-        await widget.api.post('user-status', {'user_id': user.id, 'is_active': 1});
+        await widget.api.post('user-status', {
+          'user_id': user.id,
+          'id': user.id,
+          'status': 'active',
+          'is_active': 1,
+          'approval_status': 'approved',
+        });
+        succeeded = true;
+      } catch (e) {
+        lastError = e;
       }
-      if (!mounted) return;
+    }
+
+    // 3. المحاولة الثالثة: user-approve
+    if (!succeeded) {
+      try {
+        await widget.api.post('user-approve', {
+          'user_id': user.id,
+          'id': user.id,
+          'status': 'active',
+          'is_active': 1,
+          'approval_status': 'approved',
+        });
+        succeeded = true;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _actionLoading = false);
+
+    if (succeeded) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم اعتماد الحساب وتفعيله بنجاح', style: TextStyle(fontFamily: 'Cairo')),
@@ -109,16 +163,13 @@ class _PendingUsersScreenState extends State<PendingUsersScreen> {
         ),
       );
       await _fetchPending();
-    } catch (e) {
-      if (!mounted) return;
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('فشل اعتماد الحساب: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          content: Text('فشل اعتماد الحساب: $lastError', style: const TextStyle(fontFamily: 'Cairo')),
           backgroundColor: kRed,
         ),
       );
-    } finally {
-      if (mounted) setState(() => _actionLoading = false);
     }
   }
 
@@ -126,7 +177,7 @@ class _PendingUsersScreenState extends State<PendingUsersScreen> {
     final confirmed = await ConfirmDialog.show(
       context,
       title: 'رفض طلب التسجيل',
-      message: 'هل أنت متأكد من رفض طلب حساب "${user.fullName}"؟',
+      message: 'هل أنت متأكد من رفض طلب حساب ""؟',
       confirmText: 'رفض الطلب',
       isDestructive: true,
     );
@@ -134,13 +185,67 @@ class _PendingUsersScreenState extends State<PendingUsersScreen> {
     if (!confirmed || !mounted) return;
     setState(() => _actionLoading = true);
 
+    bool succeeded = false;
+    dynamic lastError;
+
+    final fullRejectBody = <String, dynamic>{
+      'id': user.id,
+      'user_id': user.id,
+      'full_name': user.fullName.trim().isNotEmpty ? user.fullName.trim() : (user.username.isNotEmpty ? user.username : 'مهندس ميداني'),
+      'username': user.username.trim().isNotEmpty ? user.username.trim() : 'eng_',
+      'email': user.email.trim().isNotEmpty ? user.email.trim() : 'eng_@maxlond.com',
+      'role': user.role.trim().isNotEmpty ? user.role.trim() : 'engineer',
+      'phone': user.phone ?? '',
+      'specialization': user.specialization ?? '',
+      'is_active': 0,
+      'status': 'rejected',
+      'approval_status': 'rejected',
+    };
+
+    // 1. المحاولة الأساسية: user-save مع حالة rejected و is_active: 0
     try {
+      await widget.api.post('user-save', fullRejectBody);
+      succeeded = true;
+    } catch (e) {
+      lastError = e;
+    }
+
+    // 2. المحاولة الثانية: user-status
+    if (!succeeded) {
       try {
-        await widget.api.post('user-reject', {'user_id': user.id});
-      } catch (_) {
-        await widget.api.post('user-status', {'user_id': user.id, 'is_active': 0});
+        await widget.api.post('user-status', {
+          'user_id': user.id,
+          'id': user.id,
+          'status': 'rejected',
+          'is_active': 0,
+          'approval_status': 'rejected',
+        });
+        succeeded = true;
+      } catch (e) {
+        lastError = e;
       }
-      if (!mounted) return;
+    }
+
+    // 3. المحاولة الثالثة: user-reject
+    if (!succeeded) {
+      try {
+        await widget.api.post('user-reject', {
+          'user_id': user.id,
+          'id': user.id,
+          'status': 'rejected',
+          'is_active': 0,
+          'approval_status': 'rejected',
+        });
+        succeeded = true;
+      } catch (e) {
+        lastError = e;
+      }
+    }
+
+    if (!mounted) return;
+    setState(() => _actionLoading = false);
+
+    if (succeeded) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('تم رفض طلب التسجيل', style: TextStyle(fontFamily: 'Cairo')),
@@ -148,19 +253,15 @@ class _PendingUsersScreenState extends State<PendingUsersScreen> {
         ),
       );
       await _fetchPending();
-    } catch (e) {
-      if (!mounted) return;
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('فشل رفض الطلب: $e', style: const TextStyle(fontFamily: 'Cairo')),
+          content: Text('فشل رفض الطلب: $lastError', style: const TextStyle(fontFamily: 'Cairo')),
           backgroundColor: kRed,
         ),
       );
-    } finally {
-      if (mounted) setState(() => _actionLoading = false);
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return AutoRefreshWrapper(
