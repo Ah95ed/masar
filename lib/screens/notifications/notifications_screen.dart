@@ -1,3 +1,4 @@
+import '../../widgets/confirm_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants.dart';
@@ -41,6 +42,51 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     await context.read<NotificationsProvider>().markRead(item.id);
   }
 
+
+  Future<void> _deleteNotification(NotificationItem item) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'حذف الإشعار',
+      message: 'هل أنت متأكد من حذف هذا الإشعار؟',
+      confirmText: 'حذف',
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final success = await context.read<NotificationsProvider>().deleteNotification(item.id);
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم حذف الإشعار', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteAllNotifications() async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'حذف كافة الإشعارات',
+      message: 'هل أنت متأكد من رغبتك في حذف جميع الإشعارات نهائياً؟',
+      confirmText: 'حذف الكل',
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final success = await context.read<NotificationsProvider>().deleteAllNotifications();
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم حذف كافة الإشعارات بنجاح', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
+  }
   Future<void> _markAllRead() async {
     await context.read<NotificationsProvider>().markAllRead();
     if (!mounted) return;
@@ -121,12 +167,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         drawer: widget.drawer,
         appBar: AppBar(
           title: const Text('الإشعارات والتنبيهات'),
-          actions: [
+                    actions: [
             if (notifications.any((n) => !n.read))
               IconButton(
                 icon: const Icon(Icons.done_all_rounded),
-                tooltip: 'تعليم الكل كمقروء',
+                tooltip: 'تعيين الكل كمقروء',
                 onPressed: _markAllRead,
+              ),
+            if (notifications.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.delete_sweep_outlined, color: kRed),
+                tooltip: 'حذف كافة الإشعارات',
+                onPressed: _deleteAllNotifications,
               ),
           ],
         ),
@@ -172,7 +224,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           label: const Text('تعليم كمقروء', style: TextStyle(fontFamily: 'Cairo', fontSize: 12)),
                         ),
                     ],
-                  ),
+                ),
                 ),
                 const SizedBox(height: 14),
 
@@ -256,24 +308,35 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
               const Spacer(),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  if (isUnread)
-                    TextButton.icon(
-                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                      icon: const Icon(Icons.check_rounded, size: 14, color: kGreen),
-                      label: const Text('تمت القراءة', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kGreen)),
-                      onPressed: () => _markRead(item),
-                    ),
-                  if (item.link != null && item.link!.isNotEmpty) ...[
-                    const SizedBox(width: 6),
-                    TextButton.icon(
-                      style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
-                      icon: const Icon(Icons.open_in_new_rounded, size: 14, color: kCyan),
-                      label: const Text('فتح', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kCyan, fontWeight: FontWeight.bold)),
-                      onPressed: () => _handleNotificationTap(item),
-                    ),
-                  ],
+                  IconButton(
+                    style: IconButton.styleFrom(visualDensity: VisualDensity.compact),
+                    icon: const Icon(Icons.delete_outline_rounded, size: 18, color: kRed),
+                    tooltip: 'حذف الإشعار',
+                    onPressed: () => _deleteNotification(item),
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isUnread)
+                        TextButton.icon(
+                          style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                          icon: const Icon(Icons.check_rounded, size: 14, color: kGreen),
+                          label: const Text('تمت القراءة', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kGreen)),
+                          onPressed: () => _markRead(item),
+                        ),
+                      if (item.link != null && item.link!.isNotEmpty) ...[
+                        const SizedBox(width: 6),
+                        TextButton.icon(
+                          style: TextButton.styleFrom(visualDensity: VisualDensity.compact),
+                          icon: const Icon(Icons.open_in_new_rounded, size: 14, color: kCyan),
+                          label: const Text('فتح', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: kCyan, fontWeight: FontWeight.bold)),
+                          onPressed: () => _handleNotificationTap(item),
+                        ),
+                      ],
+                    ],
+                  ),
                 ],
               ),
             ],

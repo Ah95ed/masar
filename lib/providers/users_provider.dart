@@ -132,4 +132,35 @@ class UsersProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> deleteUser(int userId) async {
+    if (userId == 1) {
+      _error = 'لا يمكن حذف حساب المدير العام الرئيسي!';
+      notifyListeners();
+      return false;
+    }
+    try {
+      try {
+        await api.post('user-delete', {'user_id': userId, 'id': userId});
+      } catch (_) {
+        await api.post('user-status', {
+          'user_id': userId,
+          'id': userId,
+          'status': 'inactive',
+          'is_active': 0,
+        });
+      }
+      _users.removeWhere((u) => u.id == userId);
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _error = e.message;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _error = 'فشل حذف المستخدم';
+      notifyListeners();
+      return false;
+    }
+  }
 }

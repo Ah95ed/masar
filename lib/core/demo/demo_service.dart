@@ -162,6 +162,12 @@ class DemoService {
       'status': 'in_progress',
       'progress': 65,
       'created_at': '2026-10-01 08:00',
+      'workers_count': 22,
+      'machinery_count': 4,
+      'temperature': 29.0,
+      'weather': 'مشمس',
+      'note': 'تم إنجاز 65% من صب الأساسات وفق المعايير وتواجد المهندس في الموقع',
+      'updated_by_name': 'م. علي الجبوري',
     },
     {
       'id': 11,
@@ -176,6 +182,12 @@ class DemoService {
       'status': 'in_progress',
       'progress': 40,
       'created_at': '2026-10-02 09:30',
+      'workers_count': 18,
+      'machinery_count': 2,
+      'temperature': 31.5,
+      'weather': 'صحو',
+      'note': 'تم تدقيق تسليح الأعمدة ومطابقة المناسيب مع المخطط المعتمد',
+      'updated_by_name': 'م. سارة الحمداني',
     },
     {
       'id': 12,
@@ -190,6 +202,12 @@ class DemoService {
       'status': 'pending',
       'progress': 0,
       'created_at': '2026-10-03 08:00',
+      'workers_count': 12,
+      'machinery_count': 1,
+      'temperature': 28.0,
+      'weather': 'معتدل',
+      'note': 'تفتيش عام لإجراءات السلامة وتأمين مناطق العمل الميدانية',
+      'updated_by_name': 'م. أحمد خالد',
     },
   ];
 

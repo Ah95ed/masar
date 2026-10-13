@@ -55,28 +55,36 @@ class _SitesScreenState extends State<SitesScreen> {
     }
   }
 
-  Future<void> _cancelSite(Site site) async {
+  Future<void> _deleteSite(Site site) async {
     final confirmed = await ConfirmDialog.show(
       context,
-      title: 'إلغاء الموقع',
-      message: 'هل أنت متأكد من رغبتك في إلغاء وتجميد موقع "${site.name}"؟',
-      confirmText: 'إلغاء الموقع',
+      title: 'حذف موقع العمل',
+      message: 'هل أنت متأكد من رغبتك في حذف موقع العمل "" نهائياً من النظام؟ لا يمكن التراجع عن هذا الإجراء.',
+      confirmText: 'حذف الموقع',
       isDestructive: true,
     );
 
     if (!confirmed || !mounted) return;
 
-    final success = await context.read<SitesProvider>().cancelSite(site.id);
+    final success = await context.read<SitesProvider>().deleteSite(site.id);
     if (!mounted) return;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'تم إلغاء الموقع بنجاح',
+            'تم حذف موقع العمل بنجاح',
             style: TextStyle(fontFamily: 'Cairo'),
           ),
           backgroundColor: kGreen,
+        ),
+      );
+    } else {
+      final err = context.read<SitesProvider>().error ?? 'فشل حذف موقع العمل';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
         ),
       );
     }
@@ -336,7 +344,7 @@ class _SitesScreenState extends State<SitesScreen> {
                 ),
                 const SizedBox(width: 4),
                 TextButton.icon(
-                  onPressed: () => _cancelSite(site),
+                  onPressed: () => _deleteSite(site),
                   icon: const Icon(
                     Icons.delete_outline_rounded,
                     size: 16,

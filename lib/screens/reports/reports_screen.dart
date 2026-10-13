@@ -1,3 +1,4 @@
+import '../../widgets/confirm_dialog.dart';
 import 'package:open_filex/open_filex.dart';
 import '../../services/excel_service.dart';
 import 'package:flutter/material.dart';
@@ -187,6 +188,65 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  Future<void> _deleteReport(Report report) async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'حذف التقرير اليومي',
+      message: 'هل أنت متأكد من حذف تقرير تاريخ "${report.reportDate}" الخاص بموقع "${report.siteName ?? "موقع العمل"}" نهائياً؟',
+      confirmText: 'حذف التقرير',
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final success = await context.read<ReportsProvider>().deleteReport(report.id);
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم حذف التقرير بنجاح', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kGreen,
+        ),
+      );
+    } else {
+      final err = context.read<ReportsProvider>().error ?? 'فشل حذف التقرير';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteAllReports() async {
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'حذف كافة التقارير اليومية',
+      message: 'هل أنت متأكد من رغبتك في حذف جميع التقارير اليومية نهائياً؟ هذا الإجراء لا يمكن التراجع عنه.',
+      confirmText: 'حذف كافة التقارير',
+      isDestructive: true,
+    );
+    if (!confirmed || !mounted) return;
+
+    final success = await context.read<ReportsProvider>().deleteAllReports();
+    if (!mounted) return;
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم حذف كافة التقارير بنجاح', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kGreen,
+        ),
+      );
+    } else {
+      final err = context.read<ReportsProvider>().error ?? 'فشل حذف التقارير';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
+  }
   Future<void> _quickReview(Report report, String decision) async {
     final notesCtrl = TextEditingController();
     final isApprove = decision == 'approved';
@@ -276,6 +336,12 @@ class _ReportsScreenState extends State<ReportsScreen> {
               tooltip: 'استيراد إكسل',
               onPressed: () => _importReportsFromExcel(),
             ),
+            if (reportsProv.reports.isNotEmpty)
+              IconButton(
+                icon: const Icon(Icons.delete_sweep_outlined, color: kRed),
+                tooltip: 'حذف كافة التقارير',
+                onPressed: _deleteAllReports,
+              ),
           ],
         ),
         body: StateView(
@@ -358,9 +424,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   foregroundColor: kCyan,
                   side: const BorderSide(color: kCyan),
                 ),
-                icon: const Icon(Icons.file_upload_outlined, size: 16),
                 label: const Text('استيراد إكسل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
               ),
+              if (prov.reports.isNotEmpty)
+                OutlinedButton.icon(
+                  onPressed: () => _deleteAllReports(),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: kRed,
+                    side: const BorderSide(color: kRed),
+                  ),
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                  label: const Text('حذف الكل', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)),
+                ),
               if (prov.pendingCount > 0)
                 Pill.warning(text: '${prov.pendingCount} بانتظار المراجعة'),
             ],
@@ -526,6 +601,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                       tooltip: 'رفض',
                                       onPressed: () => _quickReview(report, 'rejected'),
                                     ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete_outline_rounded, color: kRed, size: 18),
+                                    tooltip: 'حذف التقرير',
+                                    onPressed: () => _deleteReport(report),
+                                  ),
                                   ],
                                 ],
                               ),
@@ -633,6 +713,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         label: const Text('رفض', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kRed)),
                         onPressed: () => _quickReview(r, 'rejected'),
                       ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: kRed),
+                      tooltip: 'حذف التقرير',
+                      onPressed: () => _deleteReport(r),
+                    ),
                     ],
                   ],
                 ),

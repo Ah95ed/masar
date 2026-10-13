@@ -1,11 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:open_filex/open_filex.dart';
-import '../../services/excel_service.dart';
 import 'package:flutter/material.dart';
 import '../../core/api_exception.dart';
 import '../../core/theme.dart';
 import '../../models/report.dart';
 import '../../services/admin_api.dart';
+import '../../services/excel_service.dart';
+import '../../widgets/confirm_dialog.dart';
 import '../../widgets/loading_state.dart';
 import '../../widgets/error_state.dart';
 
@@ -72,6 +73,52 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     }
   }
 
+  Future<void> _deleteReport() async {
+    final ok = await ConfirmDialog.show(
+      context,
+      title: 'حذف التقرير اليومي',
+      message: 'هل أنت متأكد من حذف التقرير #${widget.reportId} نهائياً؟ لا يمكن التراجع عن هذا الإجراء.',
+      confirmText: 'نعم، حذف التقرير',
+      cancelText: 'إلغاء',
+      isDestructive: true,
+    );
+    if (ok != true || !mounted) return;
+
+    setState(() => _submitting = true);
+    try {
+      await widget.api.post('report-delete', {
+        'report_id': widget.reportId,
+        'id': widget.reportId,
+      });
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم حذف التقرير بنجاح', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppTheme.success,
+        ),
+      );
+      Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.message, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _submitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تعذر حذف التقرير', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+    }
+  }
+
   Future<void> _reviewReport(String decision) async {
     setState(() => _submitting = true);
 
@@ -83,7 +130,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       });
 
       if (!mounted) return;
-      // ✅ نجاح العملية: العودة للقائمة بـ true لإعادة الجلب
       Navigator.pop(context, true);
     } on ApiException catch (e) {
       if (!mounted) return;
@@ -116,7 +162,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       );
     }
   }
-
 
   Future<void> _exportSingleReport() async {
     if (_report == null) return;
@@ -159,22 +204,27 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
       appBar: AppBar(
         title: Text('تقرير يومي #${widget.reportId}'),
         actions: [
-          if (_report != null)
+          if (_report != null) ...[
             IconButton(
               icon: const Icon(Icons.file_download_outlined),
               tooltip: 'تصدير التقرير (Excel)',
               onPressed: _exportSingleReport,
             ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: AppTheme.danger),
+              tooltip: 'حذف التقرير',
+              onPressed: _deleteReport,
+            ),
+          ],
         ],
       ),
       body: _loading
-          ? const LoadingState(message: 'جاري تحميل التقرير والمصروفات...')
+          ? const LoadingState(message: 'جاري تحميل التقرير والمرفقات...')
           : _error != null
               ? ErrorState(message: _error!, onRetry: _loadDetails)
               : _buildContent(),
     );
   }
-
 
   void _previewReceipt(ReportReceipt receipt) {
     showDialog(
@@ -194,7 +244,6 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Header
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 child: Row(
@@ -236,59 +285,50 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 ),
               ),
               const Divider(height: 1, color: Colors.white24),
-              // Body
               Flexible(
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(16)),
-                  child: Container(
-                    color: Colors.black87,
+                child: InteractiveViewer(
+                  panEnabled: true,
+                  minScale: 0.5,
+                  maxScale: 4.0,
+                  child: Center(
                     child: receipt.isImage
-                        ? InteractiveViewer(
-                            panEnabled: true,
-                            minScale: 0.5,
-                            maxScale: 4.0,
-                            child: Center(
-                              child: CachedNetworkImage(
-                                imageUrl: receipt.fullUrl,
-                                placeholder: (context, url) => const Padding(
-                                  padding: EdgeInsets.all(40),
-                                  child: CircularProgressIndicator(color: Color(0xFF0EA5E9)),
-                                ),
-                                errorWidget: (context, url, error) => Padding(
-                                  padding: const EdgeInsets.all(30),
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
-                                      const SizedBox(height: 10),
-                                      Text(
-                                        'تعذر تحميل صورة الوصل مباشرة\n${receipt.fullUrl}',
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(fontFamily: 'Cairo', color: Colors.white70, fontSize: 12),
-                                      ),
-                                    ],
+                        ? CachedNetworkImage(
+                            imageUrl: receipt.fullUrl,
+                            fit: BoxFit.contain,
+                            placeholder: (_, __) => const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: CircularProgressIndicator(color: Color(0xFF0EA5E9)),
+                            ),
+                            errorWidget: (_, __, ___) => const Padding(
+                              padding: EdgeInsets.all(32),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.broken_image_outlined, color: Colors.white54, size: 48),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'تعذر تحميل الصورة من الخادم',
+                                    style: TextStyle(fontFamily: 'Cairo', color: Colors.white70),
                                   ),
-                                ),
-                                fit: BoxFit.contain,
+                                ],
                               ),
                             ),
                           )
                         : Padding(
-                            padding: const EdgeInsets.all(40),
+                            padding: const EdgeInsets.all(32),
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 const Icon(Icons.description_outlined, color: Color(0xFF0EA5E9), size: 64),
-                                const SizedBox(height: 16),
+                                const SizedBox(height: 12),
                                 Text(
                                   receipt.originalName,
-                                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 14),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  receipt.fullUrl,
-                                  style: const TextStyle(fontFamily: 'Cairo', color: Colors.white60, fontSize: 11),
-                                  textAlign: TextAlign.center,
+                                  'ملف غير مدعوم للمعاينة المباشرة',
+                                  style: TextStyle(fontFamily: 'Cairo', color: Colors.white.withOpacity(0.7), fontSize: 12),
                                 ),
                               ],
                             ),
@@ -307,7 +347,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionTitle('الوصولات والسندات والمرفقات (${receipts.length})'),
+        _buildSectionTitle('الوصولات والمستندات المرفقة (${receipts.length})'),
         Card(
           elevation: 0,
           shape: RoundedRectangleBorder(
@@ -322,7 +362,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                       Icon(Icons.receipt_long_outlined, color: Colors.grey, size: 24),
                       SizedBox(width: 10),
                       Text(
-                        'لا توجد وصولات أو سندات مرفقة بهذا التقرير',
+                        'لا توجد وصولات أو مستندات مرفقة بهذا التقرير',
                         style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontSize: 12),
                       ),
                     ],
@@ -431,44 +471,181 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        // بطاقة ملخص التقرير
+        // بطاقة ملخص التقرير الأساسية
         Card(
           elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: AppTheme.border),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // رأس البطاقة: اسم الموقع والحالة
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Text(
-                        rep.siteName ?? 'الموقع',
-                        style: const TextStyle(
-                          fontFamily: 'Cairo',
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.textPrimary,
-                        ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryTeal.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(Icons.apartment_rounded, color: AppTheme.primaryTeal, size: 20),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  rep.siteName ?? 'موقع العمل',
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                ),
+                                Text(
+                                  'الموقع #${rep.siteId}',
+                                  style: const TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 11,
+                                    color: AppTheme.textMuted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     _buildStatusBadge(rep.status),
                   ],
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  'المهندس:   ·  التاريخ: ',
-                  style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
+                const SizedBox(height: 14),
+
+                // شريط المهندس والتاريخ
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 16,
+                        backgroundColor: AppTheme.primaryTeal.withOpacity(0.15),
+                        child: const Icon(Icons.person, color: AppTheme.primaryTeal, size: 18),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'المهندس المشرف الذي أرسل التقرير:',
+                              style: TextStyle(fontFamily: 'Cairo', fontSize: 10, color: AppTheme.textMuted),
+                            ),
+                            Text(
+                              rep.engineerName ?? 'مهندس غير محدد',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Row(
+                        children: [
+                          const Icon(Icons.calendar_today_outlined, size: 14, color: AppTheme.textMuted),
+                          const SizedBox(width: 4),
+                          Text(
+                            rep.reportDate,
+                            style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.textSecondary),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
-                const Divider(height: 24),
+                const SizedBox(height: 14),
+
+                // بطاقات المؤشرات الميدانية (العمال، الآليات، الطقس، الحرارة)
                 Row(
                   children: [
-                    _buildMetric('العمال', ''),
-                    _buildMetric('الآليات', ''),
-                    _buildMetric('الطقس', rep.weather ?? '--'),
-                    _buildMetric('الحرارة', rep.temperature != null ? '°' : '--'),
+                    _buildMetricCard(
+                      label: 'عدد العمال',
+                      value: '${rep.workersCount} عامل',
+                      icon: Icons.groups_rounded,
+                      color: const Color(0xFF0284C7),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMetricCard(
+                      label: 'عدد الآليات',
+                      value: '${rep.machineryCount} آلية',
+                      icon: Icons.precision_manufacturing_rounded,
+                      color: const Color(0xFFF59E0B),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMetricCard(
+                      label: 'حالة الطقس',
+                      value: rep.weather ?? 'مشمس',
+                      icon: Icons.wb_sunny_outlined,
+                      color: const Color(0xFFEAB308),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMetricCard(
+                      label: 'درجة الحرارة',
+                      value: rep.temperature != null ? '${rep.temperature}°C' : '--',
+                      icon: Icons.thermostat_outlined,
+                      color: const Color(0xFFEF4444),
+                    ),
                   ],
+                ),
+                const SizedBox(height: 14),
+
+                // شريط نسبة الإنجاز
+                Row(
+                  children: [
+                    const Text(
+                      'نسبة الإنجاز المحققة:',
+                      style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppTheme.textSecondary),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${rep.progressPercent}%',
+                      style: const TextStyle(
+                        fontFamily: 'Cairo',
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryTeal,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: LinearProgressIndicator(
+                    value: rep.progressPercent / 100.0,
+                    minHeight: 8,
+                    backgroundColor: Colors.grey.shade200,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      rep.progressPercent == 100 ? AppTheme.success : AppTheme.primaryTeal,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -480,10 +657,14 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
         _buildSectionTitle('الأعمال المنفذة'),
         Card(
           elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.border),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Text(
-              rep.workDone.isNotEmpty ? rep.workDone : 'لا توجد تفاصيل مسجلة',
+              rep.workDone.isNotEmpty ? rep.workDone : 'لا توجد تفاصيل مسجلة للأعمال',
               style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.6),
             ),
           ),
@@ -496,6 +677,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           Card(
             elevation: 0,
             color: AppTheme.dangerLight.withOpacity(0.5),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppTheme.danger),
+            ),
             child: Padding(
               padding: const EdgeInsets.all(14),
               child: Text(
@@ -507,11 +692,35 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           const SizedBox(height: 16),
         ],
 
-        // جدول المصروفات إن وجدت
-        if (rep.expenses.isNotEmpty) ...[
-          _buildSectionTitle('المصروفات اليومية ()'),
+        // المواد المستخدمة
+        if (rep.materialsUsed != null && rep.materialsUsed!.isNotEmpty) ...[
+          _buildSectionTitle('المواد والتوريدات المستخدمة'),
           Card(
             elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppTheme.border),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Text(
+                rep.materialsUsed!,
+                style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.5),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
+
+        // المصروفات اليومية
+        if (rep.expenses.isNotEmpty) ...[
+          _buildSectionTitle('المصروفات اليومية (${rep.expenses.length})'),
+          Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: const BorderSide(color: AppTheme.border),
+            ),
             child: ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -522,10 +731,10 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 return ListTile(
                   dense: true,
                   title: Text(ex.itemName, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.w600)),
-                  subtitle: Text('الكمية:  · الفئة: ',
+                  subtitle: Text('الكمية: ${ex.quantity} • الفئة: ${ex.category}',
                       style: const TextStyle(fontFamily: 'Cairo', fontSize: 11)),
                   trailing: Text(
-                    ' د.ع',
+                    '${ex.total.toStringAsFixed(0)} د.ع',
                     style: const TextStyle(
                       fontFamily: 'Cairo',
                       fontWeight: FontWeight.bold,
@@ -539,13 +748,18 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
           const SizedBox(height: 16),
         ],
 
-        // نموذج المراجعة والاعتماد
-                _buildReceiptsCard(rep.receipts),
+        // الوصولات والمستندات
+        _buildReceiptsCard(rep.receipts),
         const SizedBox(height: 16),
 
-        _buildSectionTitle('ملاحظات وقرار المدير العام'),
+        // ملاحظات وقرار الإدارة
+        _buildSectionTitle('ملاحظات وقرار الإدارة'),
         Card(
           elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: const BorderSide(color: AppTheme.border),
+          ),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(
@@ -593,7 +807,7 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
                 else
                   Center(
                     child: Text(
-                      rep.status == 'approved' ? 'هذا التقرير معتمد رسميّاً' : 'تم رفض هذا التقرير',
+                      rep.status == 'approved' ? 'تم اعتماد هذا التقرير رسمياً' : 'تم رفض هذا التقرير',
                       style: TextStyle(
                         fontFamily: 'Cairo',
                         fontWeight: FontWeight.bold,
@@ -625,22 +839,45 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
     );
   }
 
-  Widget _buildMetric(String label, String value) {
+  Widget _buildMetricCard({
+    required String label,
+    required String value,
+    required IconData icon,
+    required Color color,
+  }) {
     return Expanded(
-      child: Column(
-        children: [
-          Text(label, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: AppTheme.textSecondary)),
-          const SizedBox(height: 2),
-          Text(
-            value,
-            style: const TextStyle(
-              fontFamily: 'Cairo',
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textPrimary,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 18, color: color),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: AppTheme.textSecondary),
+              textAlign: TextAlign.center,
+              maxLines: 1,
             ),
-          ),
-        ],
+            const SizedBox(height: 2),
+            Text(
+              value,
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -648,28 +885,42 @@ class _ReportDetailScreenState extends State<ReportDetailScreen> {
   Widget _buildStatusBadge(String status) {
     Color bg = AppTheme.border;
     Color fg = AppTheme.textSecondary;
-    String label = status;
+    String text = status;
 
-    if (status == 'approved') {
-      bg = AppTheme.successLight;
-      fg = AppTheme.success;
-      label = 'معتمد';
-    } else if (status == 'rejected') {
-      bg = AppTheme.dangerLight;
-      fg = AppTheme.danger;
-      label = 'مرفوض';
-    } else if (status == 'submitted') {
-      bg = AppTheme.warningLight;
-      fg = AppTheme.warning;
-      label = 'بانتظار الاعتماد';
+    switch (status) {
+      case 'submitted':
+        bg = AppTheme.warningLight;
+        fg = AppTheme.warning;
+        text = 'قيد المراجعة';
+        break;
+      case 'approved':
+        bg = AppTheme.successLight;
+        fg = AppTheme.success;
+        text = 'معتمد';
+        break;
+      case 'rejected':
+        bg = AppTheme.dangerLight;
+        fg = AppTheme.danger;
+        text = 'مرفوض';
+        break;
+      default:
+        text = status;
     }
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(6),
+      ),
       child: Text(
-        label,
-        style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: fg),
+        text,
+        style: TextStyle(
+          fontFamily: 'Cairo',
+          fontSize: 11,
+          fontWeight: FontWeight.bold,
+          color: fg,
+        ),
       ),
     );
   }

@@ -125,4 +125,36 @@ class NotificationsProvider extends ChangeNotifier {
       return false;
     }
   }
+  Future<bool> deleteNotification(int notificationId) async {
+    try {
+      try {
+        await api.post('notification-delete', {
+          'notification_id': notificationId,
+          'id': notificationId,
+        });
+      } catch (_) {}
+      _notifications.removeWhere((n) => n.id == notificationId);
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> deleteAllNotifications() async {
+    try {
+      try {
+        await api.post('notification-delete-all', {});
+      } catch (_) {
+        try {
+          await api.post('notification-clear', {});
+        } catch (_) {}
+      }
+      _notifications.clear();
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
 }

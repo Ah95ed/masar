@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+
 import '../core/api_exception.dart';
 import '../models/site.dart';
 import '../services/admin_api.dart';
@@ -23,9 +24,12 @@ class SitesProvider extends ChangeNotifier {
 
   List<Site> get filteredSites {
     return _sites.where((s) {
-      final matchesStatus = _filterStatus == 'all' || s.status.toLowerCase() == _filterStatus.toLowerCase();
+      final matchesStatus =
+          _filterStatus == 'all' ||
+          s.status.toLowerCase() == _filterStatus.toLowerCase();
       final q = _searchQuery.toLowerCase();
-      final matchesSearch = q.isEmpty ||
+      final matchesSearch =
+          q.isEmpty ||
           s.name.toLowerCase().contains(q) ||
           s.code.toLowerCase().contains(q) ||
           s.clientName.toLowerCase().contains(q);
@@ -99,6 +103,27 @@ class SitesProvider extends ChangeNotifier {
       return false;
     } catch (_) {
       _error = 'فشل إلغاء الموقع';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteSite(int siteId) async {
+    try {
+      try {
+        await api.post('site-delete', {'site_id': siteId, 'id': siteId});
+      } catch (_) {
+        await api.post('site-cancel', {'site_id': siteId, 'id': siteId});
+      }
+      _sites.removeWhere((s) => s.id == siteId);
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _error = e.message;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _error = 'فشل حذف موقع العمل';
       notifyListeners();
       return false;
     }

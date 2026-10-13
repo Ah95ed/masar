@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import '../core/api_exception.dart';
 import '../models/task.dart';
 import '../services/admin_api.dart';
@@ -35,7 +35,8 @@ class TasksProvider extends ChangeNotifier {
       final matchesSearch = q.isEmpty ||
           t.title.toLowerCase().contains(q) ||
           (t.siteName?.toLowerCase().contains(q) ?? false) ||
-          (t.assignedToName?.toLowerCase().contains(q) ?? false);
+          t.engineerName.toLowerCase().contains(q) ||
+          t.effectiveNote.toLowerCase().contains(q);
       return matchesStatus && matchesSearch;
     }).toList();
   }

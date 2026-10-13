@@ -102,4 +102,48 @@ class ReportsProvider extends ChangeNotifier {
       return false;
     }
   }
+
+  Future<bool> deleteReport(int reportId) async {
+    try {
+      try {
+        await api.post('report-delete', {'report_id': reportId, 'id': reportId});
+      } catch (_) {}
+      _reports.removeWhere((r) => r.id == reportId);
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _error = e.message;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _error = 'فشل حذف التقرير';
+      notifyListeners();
+      return false;
+    }
+  }
+
+  Future<bool> deleteAllReports() async {
+    try {
+      try {
+        await api.post('report-delete-all', {});
+      } catch (_) {
+        for (final r in List<Report>.from(_reports)) {
+          try {
+            await api.post('report-delete', {'report_id': r.id, 'id': r.id});
+          } catch (_) {}
+        }
+      }
+      _reports.clear();
+      notifyListeners();
+      return true;
+    } on ApiException catch (e) {
+      _error = e.message;
+      notifyListeners();
+      return false;
+    } catch (_) {
+      _error = 'فشل حذف كافة التقارير';
+      notifyListeners();
+      return false;
+    }
+  }
 }

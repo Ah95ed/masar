@@ -1,3 +1,5 @@
+import 'package:masar/screens/dashboard/dashboard_screen.dart';
+
 import 'services/notification_service.dart';
 
 import 'package:flutter/material.dart';
@@ -54,6 +56,7 @@ class _MaxlondAppState extends State<MaxlondApp> {
             child: child ?? const SizedBox.shrink(),
           );
         },
+        // home: DashboardScreen(api: _api),
         home: SplashScreen(api: _api),
       ),
     );

@@ -53,6 +53,48 @@ class _UsersScreenState extends State<UsersScreen> {
     }
   }
 
+  Future<void> _deleteUser(User user) async {
+    if (user.id == 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا يمكن حذف حساب المدير العام الرئيسي!', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+      return;
+    }
+
+    final confirmed = await ConfirmDialog.show(
+      context,
+      title: 'حذف المستخدم',
+      message: 'هل أنت متأكد من رغبتك في حذف حساب المستخدم "" نهائياً من النظام؟',
+      confirmText: 'حذف المستخدم',
+      isDestructive: true,
+    );
+
+    if (!confirmed || !mounted) return;
+
+    final success = await context.read<UsersProvider>().deleteUser(user.id);
+    if (!mounted) return;
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم حذف المستخدم بنجاح', style: TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    } else {
+      final err = context.read<UsersProvider>().error ?? 'فشل حذف المستخدم';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(err, style: const TextStyle(fontFamily: 'Cairo')),
+          backgroundColor: kRed,
+        ),
+      );
+    }
+  }
+
   Future<void> _toggleStatus(User user) async {
     final willDeactivate = user.isActive == 1;
     final confirmed = await ConfirmDialog.show(
@@ -357,6 +399,11 @@ class _UsersScreenState extends State<UsersScreen> {
                                       tooltip: isActive ? 'تعطيل' : 'تفعيل',
                                       onPressed: () => _toggleStatus(u),
                                     ),
+                                    IconButton(
+                                      icon: const Icon(Icons.delete_outline_rounded, size: 18, color: kRed),
+                                      tooltip: 'حذف المستخدم',
+                                      onPressed: () => _deleteUser(u),
+                                    ),
                                   ],
                                 ],
                               ),
@@ -443,6 +490,12 @@ class _UsersScreenState extends State<UsersScreen> {
                           isActive ? 'تعطيل الحساب' : 'تفعيل الحساب',
                           style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: isActive ? kRed : kGreen),
                         ),
+                      ),
+                      const SizedBox(width: 8),
+                      TextButton.icon(
+                        onPressed: () => _deleteUser(u),
+                        icon: const Icon(Icons.delete_outline_rounded, size: 16, color: kRed),
+                        label: const Text('حذف', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: kRed)),
                       ),
                     ],
                   ],
