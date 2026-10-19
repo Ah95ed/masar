@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 
 import '../core/api_exception.dart';
 import '../models/site.dart';
@@ -110,11 +110,7 @@ class SitesProvider extends ChangeNotifier {
 
   Future<bool> deleteSite(int siteId) async {
     try {
-      try {
-        await api.post('site-delete', {'site_id': siteId, 'id': siteId});
-      } catch (_) {
-        await api.post('site-cancel', {'site_id': siteId, 'id': siteId});
-      }
+      await api.post('site-delete', {'site_id': siteId, 'id': siteId});
       _sites.removeWhere((s) => s.id == siteId);
       notifyListeners();
       return true;
@@ -129,3 +125,4 @@ class SitesProvider extends ChangeNotifier {
     }
   }
 }
+

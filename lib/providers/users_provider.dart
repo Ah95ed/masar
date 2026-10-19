@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+﻿import 'package:flutter/foundation.dart';
 import '../core/api_exception.dart';
 import '../models/user.dart';
 import '../services/admin_api.dart';
@@ -140,16 +140,7 @@ class UsersProvider extends ChangeNotifier {
       return false;
     }
     try {
-      try {
-        await api.post('user-delete', {'user_id': userId, 'id': userId});
-      } catch (_) {
-        await api.post('user-status', {
-          'user_id': userId,
-          'id': userId,
-          'status': 'inactive',
-          'is_active': 0,
-        });
-      }
+      await api.post('user-delete', {'user_id': userId, 'id': userId});
       _users.removeWhere((u) => u.id == userId);
       notifyListeners();
       return true;
