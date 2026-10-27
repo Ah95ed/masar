@@ -137,10 +137,60 @@ jobs:
           name: release-windows
           path: masar-windows.zip
 
+  build_macos:
+    name: macOS Build (DMG)
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: "3.47.2"
+
+      - name: Enable macOS desktop
+        run: flutter config --enable-macos-desktop
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build macOS app
+        run: flutter build macos --release
+
+      - name: Create macOS DMG
+        shell: bash
+        run: |
+          APP_PATH="$(find build/macos/Build/Products/Release -maxdepth 1 -name '*.app' -print -quit)"
+          if [ -z "$APP_PATH" ]; then
+            echo "::error::No .app bundle was found in build/macos/Build/Products/Release"
+            exit 1
+          fi
+          echo "Packaging: $APP_PATH"
+
+          mkdir -p dmg_staging
+          cp -R "$APP_PATH" dmg_staging/
+          ln -s /Applications dmg_staging/Applications
+
+          hdiutil create \
+            -volname "Masar" \
+            -srcfolder dmg_staging \
+            -ov -format UDZO \
+            masar-macos.dmg
+
+      - name: Upload macOS Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-macos
+          path: masar-macos.dmg
+
   create_release:
     name: Create GitHub Release
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: [build_android, build_windows]
+    needs: [build_android, build_windows, build_macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -161,12 +211,19 @@ jobs:
           name: release-windows
           path: release-assets
 
+      - name: Download macOS DMG
+        uses: actions/download-artifact@v4
+        with:
+          name: release-macos
+          path: release-assets
+
       - name: Publish GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             release-assets/app-*-release.apk
             release-assets/masar-windows.zip
+            release-assets/masar-macos.dmg
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
