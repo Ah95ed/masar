@@ -15,6 +15,9 @@ analyzer:
     - android/**
     - ios/**
     - windows/**
+    - web/**
+    - macos/**
+    - linux/**
   errors:
     deprecated_member_use: ignore
     unnecessary_underscores: ignore
