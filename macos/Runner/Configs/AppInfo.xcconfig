@@ -14,4 +14,4 @@ PRODUCT_BUNDLE_IDENTIFIER = com.masar.masar
 PRODUCT_COPYRIGHT = Copyright © 2026 com.masar. All rights reserved.
 
 // Minimum macOS version supported
-MACOSX_DEPLOYMENT_TARGET = 10.15
+MACOSX_DEPLOYMENT_TARGET = 12.0
